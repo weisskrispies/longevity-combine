@@ -19,6 +19,28 @@ const Deco = () => (
   </svg>
 );
 
+/* Sticker illustration, faded into the top-left corner and bleeding off the edges. */
+const LEAF = "M0 0 C 9 -12, 27 -12, 36 0 C 27 12, 9 12, 0 0Z";
+const STAR = "M0 -14 L3.5 -3.5 L14 0 L3.5 3.5 L0 14 L-3.5 3.5 L-14 0 L-3.5 -3.5Z";
+const Flourish = () => (
+  <svg className="flourish" viewBox="0 0 640 380" aria-hidden="true">
+    <g fill="none" strokeLinecap="round">
+      <path d="M-40 230 C 30 130, 150 84, 236 128 C 300 160, 286 238, 224 238 C 184 238, 176 200, 206 192" stroke="#F4F2EC" strokeWidth="7" />
+      <path d="M90 -30 C 190 40, 360 44, 520 -6" stroke="#B2EBF0" strokeWidth="9" />
+      <path d="M150 -24 C 250 30, 380 30, 470 0" stroke="#F4F2EC" strokeWidth="4" />
+      <path d="M470 60 C 528 92, 566 160, 524 206 C 498 234, 454 214, 468 184" stroke="#F4F2EC" strokeWidth="6" />
+      <path d="M-30 318 C 110 270, 250 344, 420 292 C 470 276, 520 280, 560 300" stroke="#B2EBF0" strokeWidth="7" />
+      <path d="M-20 350 C 120 316, 230 372, 360 340" stroke="#F4F2EC" strokeWidth="3.5" />
+    </g>
+    <g fill="#B2EBF0">
+      <path d={LEAF} transform="translate(250 120) rotate(-30)" /><path d={LEAF} transform="translate(420 300) rotate(20)" />
+      <path d={LEAF} transform="translate(40 120) rotate(-70)" /><path d={LEAF} transform="translate(560 120) rotate(60)" />
+    </g>
+    <g fill="#FFCA42"><path d={STAR} transform="translate(560 34) scale(1.3)" /><path d={STAR} transform="translate(330 250) scale(0.8)" /><path d={STAR} transform="translate(70 40) scale(0.9)" /></g>
+    <g fill="#F4F2EC"><circle cx="300" cy="64" r="5" /><circle cx="600" cy="230" r="4" /><circle cx="150" cy="270" r="4" /><circle cx="500" cy="250" r="3" /></g>
+  </svg>
+);
+
 export default function Board() {
   const [data, setData] = useState<Data | null>(null);
   const [view, setView] = useState("overall");
@@ -51,7 +73,7 @@ export default function Board() {
   return (
     <section className="b-shell kiosk" onPointerDown={touch}>
       <div className="stage" id="stage">
-        <div className="field-bg"><Deco /></div>
+        <div className="field-bg"><Deco /><Flourish /></div>
         <div className="b-grid">
           <div className="b-top">
             <div className="lockup"><span className="l1">Longevity</span><span className="l2"><svg className="sw" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 12 C 18 2, 34 14, 58 6" /></svg><span>Combine</span><svg className="sw flip" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 12 C 18 2, 34 14, 58 6" /></svg></span><svg className="spark s1" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg><svg className="spark s2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg></div>

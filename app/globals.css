@@ -595,3 +595,12 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .v-title .rib { background: #F4F2EC; color: #0F4258; border-radius: 1.6cqh; padding: 1cqh 2cqw 0.8cqh; box-shadow: 0 0 0 0.45cqh #FFCA42, 0 0.8cqh 2cqh rgba(0, 0, 0, 0.3); transform: rotate(1deg); }
 .v-title .exp { padding-left: 0.4cqw; }
 @media (prefers-reduced-motion: reduce) { .lockup, .v-title .rib { transform: none; } }
+
+/* Board header v5: sticker type, illustration faded into the corner */
+.flourish { position: absolute; left: -7cqw; top: -11cqh; width: 46cqw; height: auto; opacity: 0.38; pointer-events: none; -webkit-mask-image: linear-gradient(165deg, #000 45%, transparent 82%); mask-image: linear-gradient(165deg, #000 45%, transparent 82%); }
+.lockup { background: none; border: 0; box-shadow: none; transform: none; padding: 0; justify-items: center; position: relative; z-index: 1; }
+.lockup .l1 { font-family: var(--inline); font-size: 9.4cqh; letter-spacing: 0.02em; color: #FFCA42; }
+.lockup .l2 { font-family: var(--font); font-weight: 900; font-size: 4.6cqh; letter-spacing: 0.06em; color: #F4F2EC; margin-top: 0.2cqh; }
+.lockup .l2 > span { padding-left: 0; }
+.lockup .s1 { top: -1.4cqh; right: -2.4cqh; }
+.lockup .s2 { top: 1.6cqh; right: -4cqh; }
