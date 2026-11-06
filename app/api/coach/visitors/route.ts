@@ -6,6 +6,7 @@ const COLS = "id, code, name, age, sex, opt_in, giveaway, email, company, title,
 
 export async function GET(req: Request) {
   if (!(await isCoach())) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!process.env.SUPABASE_SECRET_KEY) return NextResponse.json({ error: "SUPABASE_SECRET_KEY isn't set in Vercel yet." }, { status: 500 });
   const q = new URL(req.url).searchParams.get("q")?.trim() ?? "";
   let query = db().from("visitors").select(COLS).order("created_at", { ascending: false }).limit(q ? 25 : 8);
   if (q) query = query.ilike("name", `%${q.replace(/[%_]/g, "")}%`);

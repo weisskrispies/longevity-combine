@@ -28,10 +28,15 @@ export default function Coach() {
   const [toast, show] = useToast();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [loadErr, setLoadErr] = useState("");
   const refresh = useCallback(async (query = q) => {
-    const r = await fetch(`/api/coach/visitors${query ? `?q=${encodeURIComponent(query)}` : ""}`, { cache: "no-store" });
-    if (r.status === 401) { setAuthed(false); return; }
-    if (r.ok) { const j = await r.json(); setList(j.visitors); setTotal(j.total); setAuthed(true); }
+    try {
+      const r = await fetch(`/api/coach/visitors${query ? `?q=${encodeURIComponent(query)}` : ""}`, { cache: "no-store" });
+      if (r.status === 401) { setAuthed(false); setLoadErr(""); return; }
+      const j = await r.json().catch(() => ({ error: `Server error (${r.status})` }));
+      if (!r.ok) { setLoadErr(j.error || `Server error (${r.status})`); setAuthed((a) => a ?? false); return; }
+      setList(j.visitors); setTotal(j.total); setAuthed(true); setLoadErr("");
+    } catch { setLoadErr("Can't reach the server. Check the WiFi."); setAuthed((a) => a ?? false); }
   }, [q]);
   useEffect(() => { refresh(""); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const t = setTimeout(() => authed && refresh(q), 250); return () => clearTimeout(t); }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -56,13 +61,14 @@ export default function Coach() {
   };
 
   if (authed === null) return <div className="c-wrap gutter"><p className="muted" style={{ paddingTop: 40 }}>Loading…</p></div>;
+  const errBox = loadErr ? <div className="panel" role="alert" style={{ maxWidth: 520, borderColor: "#E0A800" }}><b>Something's not set up yet</b><p className="small">{loadErr}</p><p className="small muted">Open <a className="textlink" href="/api/health" target="_blank" rel="noopener">/api/health</a> to see what's missing.</p></div> : null;
   if (!authed) return (
     <div className="c-wrap gutter"><header className="c-head"><Logo /><span className="div" /><span className="name">Longevity Combine</span></header>
-      <form className="panel" style={{ maxWidth: 420 }} onSubmit={async (e) => { e.preventDefault(); const r = await fetch("/api/coach/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pin }) }); if (r.ok) refresh(""); else show((await r.json()).error); }}>
+      <form className="panel" style={{ maxWidth: 420 }} onSubmit={async (e) => { e.preventDefault(); try { const r = await fetch("/api/coach/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pin }) }); if (r.ok) refresh(""); else show((await r.json().catch(() => ({ error: `Server error (${r.status})` }))).error); } catch { show("Can't reach the server. Check the WiFi."); } }}>
         <h3>Coach sign-in</h3>
         <div className="field"><label htmlFor="pin">Team PIN</label><input className="input num" id="pin" inputMode="numeric" autoComplete="off" value={pin} onChange={(e) => setPin(e.target.value)} /></div>
         <button className="btn" disabled={!pin}>Sign in</button>
-      </form>{toast}</div>
+      </form>{errBox}{toast}</div>
   );
 
   const open = (v: Visitor) => { setCur(v); setMode("results"); };
@@ -73,6 +79,7 @@ export default function Coach() {
       <div className="c-wrap gutter">
         <header className="c-head"><Logo /><span className="div" /><span className="name">Longevity Combine</span>
           <span className="count">{pending ? <><b>{pending}</b> saving…</> : <><b className="num">{total}</b> tested today</>}</span></header>
+        {errBox}
         <div className="c-home">
           <section className="c-hero"><Waves />
             <h1>Ready for the next visitor?</h1>
