@@ -13,8 +13,8 @@ export async function GET() {
     key_format: raw && /\s/.test(raw.trim()) ? "has extra text; using the first line (worth re-pasting cleanly)" : "clean",
   };
   if (url && key) {
-    const { error } = await createClient(url, key, { auth: { persistSession: false } }).from("visitors").select("id", { head: true, count: "exact" });
-    out.database = error ? (error.message.includes("does not exist") || error.code === "42P01" ? "TABLE MISSING: run supabase/schema.sql in the SQL Editor" : `ERROR: ${error.message.split(key).join("[key]").slice(0, 200)}`) : "ok";
+    const { error } = await createClient(url, key, { auth: { persistSession: false } }).from("visitors").select("id").limit(1);
+    out.database = error ? (/does not exist|schema cache/.test(error.message) || error.code === "42P01" || error.code === "PGRST205" ? "TABLE MISSING: run supabase/schema.sql in the SQL Editor" : `ERROR: ${error.message.split(key).join("[key]").slice(0, 200)}`) : "ok";
   } else out.database = "not checked";
   out.ready = Object.values(out).every((v) => !/MISSING|WRONG|ERROR/.test(v)) ? "yes" : "no";
   return NextResponse.json(out, { headers: { "cache-control": "no-store" } });
