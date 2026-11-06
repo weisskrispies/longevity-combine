@@ -566,3 +566,21 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .openers { position: relative; display: grid; gap: 8px; max-width: 44ch; }
 .openers .ok { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: #FFCA42; margin-top: 6px; }
 .openers p { color: #F4F2EC; font-size: 17px; line-height: 1.4; max-width: none; }
+
+/* Coach home v3: two cards up top */
+.c-home { grid-template-columns: minmax(0, 1fr) !important; }
+.c-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 700px) { .c-top { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); } }
+.c-hero { min-height: 0 !important; gap: 14px; padding: 30px 28px 34px; align-content: start; }
+.c-hero .ov { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: #FFCA42; position: relative; }
+.c-hero h1 { font-size: clamp(28px, 4vw, 38px); position: relative; }
+.c-hero p { position: relative; color: #B2EBF0; font-size: 17px; }
+.c-hero .btn { margin-top: 8px; min-height: 64px; font-size: 20px; padding: 0 32px; }
+.c-tips { background: var(--paper); border: 1px solid var(--line); border-radius: 28px; padding: 26px 24px; display: grid; gap: 14px; align-content: start; }
+.c-tips ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.c-tips li { font-size: 15px; line-height: 1.45; color: var(--ink-2); }
+.c-tips li b { display: block; color: var(--ink); font-size: 16px; }
+.c-tips .btn { justify-self: start; min-height: 48px; font-size: 16px; padding: 0 22px; }
+.pb .pb-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@media (min-width: 760px) { .pb .pb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pb .panel ul, .pb .panel ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 16px; line-height: 1.45; }

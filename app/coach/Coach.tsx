@@ -7,7 +7,7 @@ import { Logo, Waves, useToast } from "@/app/ui";
 
 type Floor = { dn: number; dw: number; un: number; uw: number };
 type Visitor = { id: string; code: string; name: string; age: number; sex: Sex; opt_in: boolean; giveaway: boolean; email: string | null; aspire: string | null; aspire_text: string | null; role: string | null; scores: Scores; floor_detail: Floor | null };
-type Mode = "home" | "visitor" | "scores" | "results";
+type Mode = "home" | "visitor" | "scores" | "results" | "playbook";
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const SITE = typeof window !== "undefined" ? window.location.origin : "https://combine.groovehealth.com";
 
@@ -81,14 +81,23 @@ export default function Coach() {
           <span className="count">{pending ? <><b>{pending}</b> saving…</> : <><b className="num">{total}</b> tested today</>}</span></header>
         {errBox}
         <div className="c-home">
-          <section className="c-hero"><Waves />
-            <button className="btn gold" onClick={() => setMode("visitor")}>Set up new visitor</button>
-            <div className="openers"><span className="ok">Pull people in</span>
-              <p>&ldquo;Want to see how your grip stacks up for your age?&rdquo;</p>
-              <p>&ldquo;Most people can&rsquo;t stand on one leg for 10 seconds with their eyes closed. Want to try?&rdquo;</p>
-              <span className="ok">Then pivot</span>
-              <p>&ldquo;These are the measures our PTs track with Medicare members. Who do you work with?&rdquo;</p></div>
-          </section>
+          <div className="c-top">
+            <section className="c-hero"><Waves />
+              <span className="ov">Next visitor</span>
+              <h1>Who&rsquo;s stepping up?</h1>
+              <p>Name, age and sex, then scores as they finish each test.</p>
+              <button className="btn gold" onClick={() => setMode("visitor")}>Set up new visitor</button>
+            </section>
+            <section className="c-tips">
+              <span className="eyebrow">On the floor</span>
+              <ul>
+                <li><b>Open with grip.</b> &ldquo;Want to see how your grip stacks up for your age?&rdquo;</li>
+                <li><b>Pivot after the score.</b> &ldquo;These are the measures our PTs track with Medicare members. Who do you work with?&rdquo;</li>
+                <li><b>Safety first.</b> Ask about injuries or dizziness. Spot every balance and floor test.</li>
+              </ul>
+              <button className="btn secondary" onClick={() => setMode("playbook")}>Full playbook</button>
+            </section>
+          </div>
           <section className="c-find">
             <div className="head"><h2 className="eyebrow">{q ? "Search results" : "Recent visitors"}</h2>
               <a className="small muted" href="/api/coach/export">Export CSV</a></div>
@@ -103,6 +112,7 @@ export default function Coach() {
       </div>
       {mode !== "home" && (
         <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="s-title">
+          {mode === "playbook" && <Playbook onClose={() => setMode("home")} />}
           {mode === "visitor" && <VisitorStep onClose={close} onCreated={(v) => { setCur(v); setMode("scores"); }} show={show} />}
           {mode === "scores" && cur && <ScoresStep v={cur} onScores={updateScores} onClose={() => { show("Saved. Search their name to pick up where you left off."); close(); }} onNext={() => setMode("results")} />}
           {mode === "results" && cur && <ResultsStep v={cur} onEdit={() => setMode("scores")} onClose={close} onEmail={(email, quiet) => { const v = { ...cur, email }; setCur(v); queuePatch(v, { email }); if (!quiet) show(`Saved. ${cur.name.split(" ")[0]}'s results are on their way to ${email}.`); }} />}
@@ -250,6 +260,49 @@ function ResultsStep({ v, onEdit, onClose, onEmail }: { v: Visitor; onEdit: () =
         </div>
       </div>
       <div className="s-foot"><button className="btn secondary" onClick={onEdit}>Edit scores</button><button className="btn" onClick={onClose}>Done</button></div>
+    </div>
+  );
+}
+
+function Playbook({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="sheet-in"><div className="s-head"><span /><span className="eyebrow" style={{ textAlign: "center" }}>Floor playbook</span><button className="x" onClick={onClose} aria-label="Close">×</button></div>
+      <div className="s-body pb">
+        <h2 className="s-title" id="s-title">How to run the Combine</h2>
+        <div className="pb-grid">
+          <section className="panel"><h3>Pull people in</h3><ul>
+            <li>Stand at the aisle edge, never behind the counter. Keep one person mid-test; a test in progress draws a crowd.</li>
+            <li>&ldquo;Want to see how your grip stacks up for your age?&rdquo; It takes 30 seconds and it&rsquo;s the easiest yes.</li>
+            <li>&ldquo;Most people can&rsquo;t stand on one leg for 10 seconds with their eyes closed. Want to try?&rdquo;</li>
+            <li>&ldquo;Two minutes against the wall gets you into the 2:00 Club.&rdquo;</li>
+            <li>Point at the board: &ldquo;Your age group has an open spot.&rdquo;</li></ul></section>
+          <section className="panel"><h3>Pivot after the score (60 to 90 sec)</h3><ul>
+            <li><b>Health plan or medical group:</b> &ldquo;Grip and balance are measures our PTs track for Medicare members with osteoporosis and sarcopenia, billed through RTM. How does your group handle MSK between visits?&rdquo;</li>
+            <li><b>Health system:</b> &ldquo;Most of the progress in these conditions happens between appointments. That&rsquo;s the gap we fill. Where do your patients go after a DEXA?&rdquo;</li>
+            <li><b>Investor:</b> &ldquo;We&rsquo;re the clinical, Medicare-covered version of this. Happy to show you the retention curve.&rdquo; Then find Patrick.</li>
+            <li><b>Press:</b> bring them to Patrick.</li>
+            <li><b>Anyone with a parent:</b> hand them the card.</li></ul></section>
+          <section className="panel"><h3>Qualify in three questions</h3><ol>
+            <li>Who do you work with?</li><li>Do you cover or care for Medicare members?</li><li>Who owns MSK or fall prevention on your side?</li></ol>
+            <p className="small muted">Pick their answer under &ldquo;What do you do?&rdquo; in setup. Plans and medical groups get tagged A for follow-up.</p></section>
+          <section className="panel"><h3>Safety</h3><ul>
+            <li>Before any test: &ldquo;Any injuries, recent surgery, or dizziness today?&rdquo;</li>
+            <li>Stand beside them for balance and floor rise, within arm&rsquo;s reach.</li>
+            <li>Offer a 10-second eyes-open balance first to anyone hesitant.</li>
+            <li>Anyone who hesitates gets a different test. Never push.</li>
+            <li>Say &ldquo;below typical for your age,&rdquo; never &ldquo;you have sarcopenia.&rdquo;</li></ul></section>
+          <section className="panel"><h3>Scoring quick reference</h3><ul>
+            <li><b>Grip:</b> best of 2 per hand, enter the stronger hand.</li>
+            <li><b>Balance:</b> arms crossed, eyes closed, best side. Stop at 60 seconds.</li>
+            <li><b>Wall sit:</b> thighs parallel. Stop at 2:00 (2:00 Club).</li>
+            <li><b>Push-ups:</b> 60 seconds. Men full, women from knees. Chest to a fist.</li>
+            <li><b>Floor rise:</b> start at 10. Minus 1 per hand, knee, forearm or side of leg. Minus ½ per wobble.</li></ul></section>
+          <section className="panel"><h3>Wrap up</h3><ul>
+            <li>Show them their results on the iPad, then the QR code.</li>
+            <li>Get an email so their report and plan reach them.</li>
+            <li>Bars for anyone who stops, headbands for anyone who tests, band sets for all five.</li></ul></section>
+        </div>
+      </div>
     </div>
   );
 }
