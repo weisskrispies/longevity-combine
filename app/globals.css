@@ -516,3 +516,15 @@ button { cursor: pointer; }
 .v-title { gap: 1.4cqh; padding-left: 3cqw; border-left: 0.25cqh solid rgba(178, 235, 240, 0.3); }
 .v-title .rib { box-shadow: none; border-radius: 1cqh; padding: 0.9cqh 1.6cqw 0.7cqh; }
 .v-title .exp { font-size: 2cqh; color: #B2EBF0; }
+
+/* Board header v3: sticker character, anchored to the lockup */
+.lockup { position: relative; justify-items: center; }
+.lockup .l1 { font-family: var(--inline); font-weight: 900; font-size: 8.8cqh; line-height: 0.9; color: #FFCA42; letter-spacing: 0.03em; text-shadow: none; }
+.lockup .l2 { display: flex; align-items: center; gap: 1cqw; font-size: 3.6cqh; letter-spacing: 0.34em; margin-top: 0.6cqh; padding-left: 0; }
+.lockup .l2 > span { padding-left: 0.34em; }
+.lockup .sw { width: 3.6cqw; height: 1cqw; overflow: visible; }
+.lockup .sw path { fill: none; stroke: #B2EBF0; stroke-width: 3; stroke-linecap: round; }
+.lockup .sw.flip { transform: scaleX(-1); }
+.lockup .spark { position: absolute; fill: #FFCA42; }
+.lockup .s1 { width: 2.4cqh; height: 2.4cqh; top: -1.2cqh; right: -2cqh; }
+.lockup .s2 { width: 1.5cqh; height: 1.5cqh; top: 1.4cqh; right: -3.6cqh; opacity: 0.75; }
