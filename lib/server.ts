@@ -3,16 +3,19 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 
+/** First token of the secret key env var (tolerates stray whitespace or a doubled paste). */
+export const secretKey = () => (process.env.SUPABASE_SECRET_KEY || "").trim().split(/\s+/)[0] || undefined;
+
 /** Server-only Supabase client using the secret key. Never import from client code. */
 export function db() {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://vxijgfpkmowmrdfowohb.supabase.co"), key = process.env.SUPABASE_SECRET_KEY;
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://vxijgfpkmowmrdfowohb.supabase.co"), key = secretKey();
   if (!url || !key) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY");
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
 /* Coach access: one shared PIN (COACH_PIN), remembered in a signed cookie. */
 const COOKIE = "lc_coach";
-const sign = (v: string) => createHmac("sha256", process.env.SUPABASE_SECRET_KEY || "dev").update(v).digest("hex");
+const sign = (v: string) => createHmac("sha256", secretKey() || "dev").update(v).digest("hex");
 export const pinOk = (pin: string) => {
   const real = process.env.COACH_PIN || "2026";
   if (!real || pin.length !== real.length) return false;
