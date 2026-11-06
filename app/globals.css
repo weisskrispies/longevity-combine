@@ -604,3 +604,10 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .lockup .l2 > span { padding-left: 0; }
 .lockup .s1 { top: -1.4cqh; right: -2.4cqh; }
 .lockup .s2 { top: 1.6cqh; right: -4cqh; }
+
+/* Board header v6: solid gold wordmark, swashes framing it like the sticker */
+.lockup .l1 { font-family: var(--display); font-weight: 900; font-size: 9.6cqh; letter-spacing: 0.035em; color: #FFCA42; line-height: 0.95; }
+.lockup .frame { position: absolute; left: -15%; top: -24%; width: 130%; height: 150%; z-index: -1; pointer-events: none; opacity: 0.85; }
+.flourish { opacity: 0.18; }
+.stage { overflow: hidden; }
+.lockup .frame { top: -17%; height: 132%; left: -13%; width: 126%; }
