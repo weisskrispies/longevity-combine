@@ -142,3 +142,21 @@ export function headlineFor(p: Person) {
   if (avg >= 40) return "You're right around typical for your age, with clear room to build.";
   return "You have real room to build, and these measures respond quickly.";
 }
+
+/**
+ * Tier for display. Floor rise uses the research risk bands (Brito 2012:
+ * 8-10 lowest risk) instead of estimated percentiles, since published age
+ * percentiles for it aren't available to us.
+ */
+export const floorTier = (score: number): Tier => (score >= 10 ? "elite" : score >= 8 ? "strong" : score >= 6 ? "solid" : "building");
+export function tierFor(t: TestId, p: Person): Tier | null {
+  const v = p.scores[t]; if (v == null) return null;
+  return t === "floor" ? floorTier(v) : tierOf(percentile(t, p.age, p.sex, v)!);
+}
+/** 0-100 position on the four-step ladder (equal-width tiers). */
+export function ladderPos(t: TestId, p: Person) {
+  const v = p.scores[t]!;
+  if (t === "floor") { const tr = floorTier(v); return tr === "elite" ? 87.5 : tr === "strong" ? 50 + ((v - 8) / 2) * 25 : tr === "solid" ? 25 + ((v - 6) / 2) * 25 : (v / 6) * 25; }
+  const pc = percentile(t, p.age, p.sex, v)!, B = [0, 25, 75, 90, 100], i = ["building", "solid", "strong", "elite"].indexOf(tierOf(pc));
+  return (i + (pc - B[i]) / (B[i + 1] - B[i])) * 25;
+}

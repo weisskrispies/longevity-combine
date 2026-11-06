@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ORDER, TESTS, TIER, fmt, movementAge, pointsOf, tierOf, unitOf, valueAt, type Scores, type Sex, type TestId, type Tier } from "@/lib/norms";
+import { ORDER, TESTS, TIER, tierFor, ladderPos, fmt, movementAge, pointsOf, tierOf, unitOf, valueAt, type Scores, type Sex, type TestId, type Tier } from "@/lib/norms";
 import { ASPIRE, CLIN, HABITS, NOUN, WHAT, PARTNER_EMAIL } from "@/lib/copy";
 import { Logo } from "@/app/ui";
 
@@ -76,7 +76,6 @@ export default function Report({ code }: { code: string }) {
   const headline = done.length > 1 && pts[best] - pts[low] >= 15 ? `Your ${NOUN[best]} is ahead of your age. ${cap(NOUN[low])} is where to focus.`
     : avgAll >= 65 ? `You're ahead of most ${who} your age across the board.` : avgAll >= 40 ? "You're right around typical for your age, with clear room to build." : "You have real room to build, and these measures respond quickly.";
   const mAge = movementAge(p), showAge = d.age >= 45 && done.length >= 3, diff = d.age - mAge;
-  const markPos = (pc: number) => { const i = TIERS.indexOf(tierOf(pc)); return (i + (pc - BOUNDS[i]) / (BOUNDS[i + 1] - BOUNDS[i])) * 25; };
 
   const notes: string[] = [];
   if (d.scores.grip != null) { const c = d.sex === "F" ? 16 : 27, g = d.scores.grip; notes.push(g >= c + 6 ? `Your grip is well clear of the <b>${c} kg</b> low-strength line clinicians use. Grip is one of the most predictive single measures of healthy aging.` : g >= c ? `Your grip is just above the <b>${c} kg</b> low-strength line. Worth building a buffer, since grip declines steadily after 50.` : `Your grip is below the <b>${c} kg</b> low-strength line clinicians use. Worth raising with your doctor, and it responds well to training.`); }
@@ -87,7 +86,7 @@ export default function Report({ code }: { code: string }) {
   const goals: { label: string; takes?: string }[] = [...presets.map((k) => ({ label: ASPIRE[k].label, takes: ASPIRE[k].takes })), ...(gKeys.includes("other") && d.aspire_text ? [{ label: d.aspire_text }] : [])];
   const fromGoals = [...new Set(presets.flatMap((k) => ASPIRE[k].tests))].filter((t) => d.scores![t] != null).slice(0, 3);
   const gTests = fromGoals.length ? fromGoals : sorted.slice().reverse().slice(0, 2);
-  const prio = [...new Set([low, ...gTests, ...sorted.slice().reverse()])].filter((t) => pts[t] < 90).slice(0, 3);
+  const prio = [...new Set([low, ...gTests, ...sorted.slice().reverse()])].filter((t) => tierFor(t, p) !== "elite").slice(0, 3);
   const habits = prio.length ? prio : [low];
   const retest = new Date(Date.now() + 28 * 864e5).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
@@ -99,11 +98,11 @@ export default function Report({ code }: { code: string }) {
       </section>
 
       <section className="sec"><div className="sec-head"><span className="ov">How you compare</span><h2>Test by test, against {who} your age.</h2></div>
-        <div className="cmp-list">{done.map((t) => { const pc = pts[t], tr = tierOf(pc), ti = TIERS.indexOf(tr); return (
+        <div className="cmp-list">{done.map((t) => { const pc = pts[t], tr = tierFor(t, p)!, ti = TIERS.indexOf(tr); return (
           <div className="cmp-card" key={t}><div className="cmp-top"><h3>{TESTS[t].name}</h3><span className="res">{fmt(t, d.scores![t])}<small>{unitOf(t)}</small></span></div>
-            <div className="ladder" role="img" aria-label={`${TIER[tr]} for your age, ${pc}th percentile`}>{TIERS.map((x, i) => <span key={x} className={`seg ${i <= ti ? "on" : ""} ${i <= ti && tr === "elite" ? "elite" : ""}`} />)}<span className="mk" style={{ left: `${markPos(pc)}%` }} /></div>
+            <div className="ladder" role="img" aria-label={`${TIER[tr]}${t === "floor" ? "" : ` for your age, ${pc}th percentile`}`}>{TIERS.map((x, i) => <span key={x} className={`seg ${i <= ti ? "on" : ""} ${i <= ti && tr === "elite" ? "elite" : ""}`} />)}<span className="mk" style={{ left: `${ladderPos(t, p)}%` }} /></div>
             <div className="ladder-l">{TIERS.map((x) => <span key={x} className={x === tr ? "on" : ""}>{TIER[x]}</span>)}</div>
-            <p className="cmp-say">{pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50))}{u(t)}</b>.</>}</p></div>); })}</div>
+            <p className="cmp-say">{t === "floor" ? (d.scores![t]! >= 8 ? <>In the <b>lowest-risk band</b> (8 to 10) in the research on this test.</> : <>The research&rsquo;s lowest-risk band starts at <b>8</b>. Each point counts.</>) : pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50))}{u(t)}</b>.</>}</p></div>); })}</div>
         {notes.length > 0 && <div className="notes">{notes.map((n, i) => <div className="note" key={i}><span style={{ color: "var(--ink)" }}><Idea /></span><p dangerouslySetInnerHTML={{ __html: n }} /></div>)}</div>}
       </section>
       <WaveLine />
@@ -121,7 +120,7 @@ export default function Report({ code }: { code: string }) {
           <p>No gym and no schedule. Each one fits into something you already do, and each targets the results that matter most for your goal.</p></div>
         <div className="habits">{habits.map((t) => { const h = HABITS[t]; return (
           <div className="habit" key={t}><div className="habit-top"><span className="habit-ic" style={{ color: "var(--ink)" }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[t]} /></svg></span><div><span className="for">For your {NOUN[t]}</span><h3>{h.title}</h3></div></div>
-            <div className="when">{h.when.map((w) => <span key={w}>{w}</span>)}</div><p className="do">{h.dose[tierOf(pts[t])]}</p><p className="why"><b>Why it works.</b> {h.why}</p></div>); })}</div>
+            <div className="when">{h.when.map((w) => <span key={w}>{w}</span>)}</div><p className="do">{h.dose[tierFor(t, p) ?? "solid"]}</p><p className="why"><b>Why it works.</b> {h.why}</p></div>); })}</div>
         <div className="retest"><span className="d">{retest}</span><span><b>Re-test in four weeks.</b><span className="muted small">Repeat your weakest test at home and compare. Most people see a change.</span></span></div>
         <p className="fine2">General guidance, not a medical prescription. If you have a health condition, check with your clinician first.</p></section>
 
@@ -129,7 +128,7 @@ export default function Report({ code }: { code: string }) {
       <section className="sec"><div className="sec-head"><span className="ov">The detail</span><h2>Your numbers and the research behind them.</h2></div>
         <div className="det">{done.map((t) => (
           <details key={t}><summary><span className="nm">{TESTS[t].name}</span><span className="rv num">{fmt(t, d.scores![t])}{u(t)}</span><span className="chev" aria-hidden="true">›</span></summary>
-            <div className="body"><div className="refs"><div><span>You</span><b>{fmt(t, d.scores![t])}{u(t)}</b></div><div><span>Typical</span><b>{fmt(t, valueAt(t, d.age, d.sex, 50))}{u(t)}</b></div><div><span>Top 10%</span><b>{fmt(t, valueAt(t, d.age, d.sex, 90))}{u(t)}</b></div></div>
+            <div className="body"><div className="refs"><div><span>You</span><b>{fmt(t, d.scores![t])}{u(t)}</b></div>{t === "floor" ? <><div><span>Lowest risk</span><b>8 to 10</b></div><div><span>Highest risk</span><b>0 to 3</b></div></> : <><div><span>Typical</span><b>{fmt(t, valueAt(t, d.age, d.sex, 50))}{u(t)}</b></div><div><span>Top 10%</span><b>{fmt(t, valueAt(t, d.age, d.sex, 90))}{u(t)}</b></div></>}</div>
               <p className="clin">{CLIN[t](d.sex)}</p></div></details>))}</div>
         <p className="fine2">Typical is the median and top 10% the 90th percentile for {who} your age in published norms. Balance, floor rise and wall sit norms are approximate.</p></section>
 

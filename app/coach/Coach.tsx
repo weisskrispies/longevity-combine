@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { ORDER, TESTS, TIER, displayName, fmt, isFull, percentile, tierOf, unitOf, combine, clampScore, type Scores, type Sex, type TestId } from "@/lib/norms";
+import { ORDER, TESTS, TIER, displayName, tierFor, fmt, isFull, percentile, tierOf, unitOf, combine, clampScore, type Scores, type Sex, type TestId } from "@/lib/norms";
 import { ASPIRE, ROLES } from "@/lib/copy";
 import { Logo, Waves, useToast } from "@/app/ui";
 
@@ -173,7 +173,7 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
 
 function Echo({ t, v }: { t: TestId; v: Visitor }) {
   const val = v.scores[t]; if (val == null) return null;
-  const tr = tierOf(percentile(t, v.age, v.sex, val)!);
+  const tr = tierFor(t, v)!;
   return <>{t === "wallsit" ? `${fmt(t, val)}${val >= 120 ? " · 2:00 Club" : ""}` : null}<span className={`pill ${tr}`}>{TIER[tr]}</span></>;
 }
 
@@ -233,7 +233,7 @@ function ResultsStep({ v, onEdit, onClose, onEmail }: { v: Visitor; onEdit: () =
         <div className="res-top"><div><p className="eyebrow">Show {v.name.split(" ")[0]}</p><h2 className="s-title" id="s-title">How you stack up for your age</h2></div></div>
         <div className="cols">
           <div className="panel"><div className="rlist">{ORDER.map((t) => { const val = v.scores[t]; if (val == null) return <div key={t} className="rline skip"><span className="t">{TESTS[t].short}</span><span className="v">Skipped</span><span /></div>;
-            const tr = tierOf(percentile(t, v.age, v.sex, val)!); return <div key={t} className="rline"><span className="t">{TESTS[t].short}</span><span className="v num">{fmt(t, val)}<small>{unitOf(t)}</small></span><span className={`pill ${tr}`}>{TIER[tr]}</span></div>; })}</div>
+            const tr = tierFor(t, v)!; return <div key={t} className="rline"><span className="t">{TESTS[t].short}</span><span className="v num">{fmt(t, val)}<small>{unitOf(t)}</small></span><span className={`pill ${tr}`}>{TIER[tr]}</span></div>; })}</div>
             {isFull(p) ? <div className="cstrip"><span><b>All five done.</b><br /><span className="small">Combine Score, out of 500</span></span><span className="v num">{combine(p)}</span></div> : <p className="small muted">Do all five to get a Combine Score and a spot on the Combine board.</p>}</div>
           <div className="panel">
             <div className="share"><div className="qr">{qr && <img src={qr} alt={`QR code for ${v.name}'s report`} />}</div>
