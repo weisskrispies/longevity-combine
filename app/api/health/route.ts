@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 /** Setup check. Reports what's configured without revealing any values. */
 export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.SUPABASE_SECRET_KEY;
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://vxijgfpkmowmrdfowohb.supabase.co"), key = process.env.SUPABASE_SECRET_KEY;
   const out: Record<string, string> = {
     supabase_url: url ? "set" : "MISSING: add NEXT_PUBLIC_SUPABASE_URL in Vercel",
     secret_key: key ? (key.startsWith("sb_publishable") ? "WRONG KEY: this is the publishable key, use a Secret key" : "set") : "MISSING: add SUPABASE_SECRET_KEY in Vercel, then redeploy",
