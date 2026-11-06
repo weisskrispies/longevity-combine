@@ -127,3 +127,18 @@ export function displayName(full: string) {
   if (parts.length < 2) return parts[0] || "";
   return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
 }
+
+const NOUNS: Record<TestId, string> = { grip: "grip strength", balance: "balance", wallsit: "leg strength", pushups: "upper-body strength", floor: "floor rise" };
+/** One-line insight used in the report hero and the results email. */
+export function headlineFor(p: Person) {
+  const pts = pointsOf(p) as Record<TestId, number>, done = ORDER.filter((t) => p.scores[t] != null);
+  if (!done.length) return "Your results are ready.";
+  const who = p.sex === "F" ? "women" : "men";
+  const sorted = done.slice().sort((a, c) => pts[c] - pts[a]), best = sorted[0], low = sorted[sorted.length - 1];
+  const avg = Math.round(done.reduce((a, t) => a + pts[t], 0) / done.length);
+  const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+  if (done.length > 1 && pts[best] - pts[low] >= 15) return `Your ${NOUNS[best]} is ahead of your age. ${cap(NOUNS[low])} is where to focus.`;
+  if (avg >= 65) return `You're ahead of most ${who} your age across the board.`;
+  if (avg >= 40) return "You're right around typical for your age, with clear room to build.";
+  return "You have real room to build, and these measures respond quickly.";
+}
