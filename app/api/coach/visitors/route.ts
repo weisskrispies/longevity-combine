@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const row = {
     code: newCode(), name: b.name.trim().slice(0, 40), age, sex: b.sex, opt_in: b.opt_in !== false, giveaway: !!b.giveaway,
     email: emailOk(b.email) ? b.email.trim().toLowerCase() : null, email_source: emailOk(b.email) ? "giveaway" : null,
-    aspire: typeof b.aspire === "string" ? b.aspire.slice(0, 30) : null, aspire_text: typeof b.aspire_text === "string" ? b.aspire_text.slice(0, 120) : null,
+    aspire: typeof b.aspire === "string" ? b.aspire.split(",").filter((k: string) => /^[a-z]+$/.test(k)).slice(0, 3).join(",") || null : null, aspire_text: typeof b.aspire_text === "string" ? b.aspire_text.slice(0, 120) : null,
     role: typeof b.role === "string" ? b.role.slice(0, 30) : null,
   };
   for (let i = 0; i < 3; i++) {

@@ -36,3 +36,7 @@ language plpgsql as $$ begin new.updated_at = now(); return new; end $$;
 drop trigger if exists visitors_touch on public.visitors;
 create trigger visitors_touch before update on public.visitors
 for each row execute function public.touch_updated_at();
+
+-- v2 (Nov 5): follow-up interest flag and results-email tracking
+alter table public.visitors add column if not exists interest text;
+alter table public.visitors add column if not exists emailed_at timestamptz;

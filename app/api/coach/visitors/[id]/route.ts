@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, isCoach, emailOk } from "@/lib/server";
 import { ORDER, clampScore, type TestId } from "@/lib/norms";
+import { sendReportEmail } from "@/lib/email";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!(await isCoach())) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
@@ -18,7 +19,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (!emailOk(b.email)) return NextResponse.json({ error: "That email doesn't look right." }, { status: 400 });
     patch.email = b.email.trim().toLowerCase(); patch.email_source = "coach";
   }
-  const { data, error } = await db().from("visitors").update(patch).eq("id", id).select("id, code, scores, email").single();
+  const sel = async (cols: string) => db().from("visitors").update(patch).eq("id", id).select(cols).single<{ id: string; code: string; name: string; email: string | null; emailed_at?: string | null }>();
+  let { data, error } = await sel("id, code, name, scores, email, emailed_at");
+  if (error && /emailed_at/.test(error.message)) ({ data, error } = await sel("id, code, name, scores, email"));
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (data && patch.email && data.email) await sendReportEmail({ ...data, email: data.email });
   return NextResponse.json({ visitor: data });
 }

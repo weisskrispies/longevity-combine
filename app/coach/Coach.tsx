@@ -102,7 +102,7 @@ export default function Coach() {
         <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="s-title">
           {mode === "visitor" && <VisitorStep onClose={close} onCreated={(v) => { setCur(v); setMode("scores"); }} show={show} />}
           {mode === "scores" && cur && <ScoresStep v={cur} onScores={updateScores} onClose={() => { show("Saved. Search their name to pick up where you left off."); close(); }} onNext={() => setMode("results")} />}
-          {mode === "results" && cur && <ResultsStep v={cur} onEdit={() => setMode("scores")} onClose={close} onEmail={(email) => { const v = { ...cur, email }; setCur(v); queuePatch(v, { email }); show(`Saved. ${cur.name.split(" ")[0]}'s report is linked to ${email}.`); }} />}
+          {mode === "results" && cur && <ResultsStep v={cur} onEdit={() => setMode("scores")} onClose={close} onEmail={(email, quiet) => { const v = { ...cur, email }; setCur(v); queuePatch(v, { email }); if (!quiet) show(`Saved. ${cur.name.split(" ")[0]}'s results are on their way to ${email}.`); }} />}
         </div>
       )}
       {toast}
@@ -119,17 +119,21 @@ function Steps({ at, onClose }: { at: number; onClose: () => void }) {
 }
 
 function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCreated: (v: Visitor) => void; show: (m: string) => void }) {
-  const [d, setD] = useState({ name: "", age: "", sex: "", opt_in: true, giveaway: false, email: "", aspire: "", aspire_text: "", role: "" });
+  const [d, setD] = useState({ name: "", age: "", sex: "", opt_in: true, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: unknown) => setD((x) => ({ ...x, [k]: v }));
   const age = Number(d.age), ok = d.name.trim() && age >= 18 && age <= 105 && d.sex && (!d.giveaway || emailOk(d.email));
   const chip = (name: string, val: string, label: string) => (
     <span key={val}><input type="radio" name={name} id={`${name}-${val}`} checked={(d as Record<string, unknown>)[name] === val} onChange={() => set(name, val)} /><label htmlFor={`${name}-${val}`}>{label}</label></span>
   );
+  const goalChip = (val: string, label: string) => {
+    const on = d.aspire.includes(val), full = d.aspire.length >= 3 && !on;
+    return <span key={val}><input type="checkbox" id={`aspire-${val}`} checked={on} disabled={full} onChange={() => set("aspire", on ? d.aspire.filter((x) => x !== val) : [...d.aspire, val])} /><label htmlFor={`aspire-${val}`}>{label}</label></span>;
+  };
   const submit = async () => {
     if (!ok || busy) return; setBusy(true);
     try {
-      const r = await fetch("/api/coach/visitors", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...d, age, email: d.giveaway ? d.email : null, aspire: d.aspire || null, aspire_text: d.aspire === "other" ? d.aspire_text : null, role: d.role || null }) });
+      const r = await fetch("/api/coach/visitors", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...d, age, email: d.giveaway ? d.email : null, aspire: d.aspire.join(",") || null, aspire_text: d.aspire.includes("other") ? d.aspire_text : null, role: d.role || null }) });
       const j = await r.json(); if (!r.ok) throw new Error(j.error); onCreated(j.visitor);
     } catch (e) { show(e instanceof Error && e.message ? e.message : "Couldn't save. Check the WiFi and try again."); } finally { setBusy(false); }
   };
@@ -151,9 +155,9 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
             <p className="small muted">Before any test, ask: &ldquo;Any injuries, recent surgery, or dizziness today?&rdquo;</p>
           </div>
           <div className="panel">
-            <div className="field"><span className="lab">At 85, what do you want to still be doing? <span className="opt">optional</span></span>
-              <div className="chips">{Object.entries(ASPIRE).map(([k, v]) => chip("aspire", k, v.label))}{chip("aspire", "other", "Something else")}</div>
-              {d.aspire === "other" && <input className="input other-in" placeholder="In their words: sail, chase grandkids, run a 10K…" value={d.aspire_text} onChange={(e) => set("aspire_text", e.target.value)} autoComplete="off" />}</div>
+            <div className="field"><span className="lab">At 85, what do you want to still be doing? <span className="opt">pick up to 3</span></span>
+              <div className="chips">{Object.entries(ASPIRE).map(([k, v]) => goalChip(k, v.label))}{goalChip("other", "Something else")}</div>
+              {d.aspire.includes("other") && <input className="input other-in" placeholder="In their words: sail, chase grandkids, run a 10K…" value={d.aspire_text} onChange={(e) => set("aspire_text", e.target.value)} autoComplete="off" />}</div>
             <div className="field"><span className="lab">What do you do? <span className="opt">optional</span></span>
               <div className="chips">{Object.entries(ROLES).map(([k, v]) => chip("role", k, v[0]))}</div></div>
           </div>
@@ -214,10 +218,11 @@ function ScoresStep({ v, onScores, onClose, onNext }: { v: Visitor; onScores: (s
   );
 }
 
-function ResultsStep({ v, onEdit, onClose, onEmail }: { v: Visitor; onEdit: () => void; onClose: () => void; onEmail: (e: string) => void }) {
+function ResultsStep({ v, onEdit, onClose, onEmail }: { v: Visitor; onEdit: () => void; onClose: () => void; onEmail: (e: string, quiet?: boolean) => void }) {
   const [qr, setQr] = useState(""); const [email, setEmail] = useState(v.email || "");
   const url = `${SITE}/r/${v.code}`;
   useEffect(() => { QRCode.toDataURL(url, { width: 480, margin: 1, color: { dark: "#0F4258", light: "#FFFFFF" } }).then(setQr); }, [url]);
+  useEffect(() => { if (v.email) onEmail(v.email, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const p = { age: v.age, sex: v.sex, scores: v.scores };
   return (
     <div className="sheet-in"><Steps at={2} onClose={onClose} />

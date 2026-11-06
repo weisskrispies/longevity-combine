@@ -468,3 +468,26 @@ button { cursor: pointer; }
   .gate2 { border-radius: 24px; padding: 26px 20px 22px; }
   .gate2 .row2 { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Sex toggle: chips sit side by side, full width */
+.chips.seg > span { display: grid; }
+.chips.seg > span label { width: 100%; }
+.chips input:disabled + label { opacity: 0.4; cursor: not-allowed; }
+
+/* Installed web app (home-screen): clear the system bar and toolbar */
+@media (display-mode: standalone) {
+  .c-wrap { padding-top: calc(env(safe-area-inset-top, 0px) + 20px); }
+  .sheet { padding-top: calc(env(safe-area-inset-top, 0px) + 20px); }
+}
+
+/* Report: multiple goals and follow-up paths */
+.goal-h .gl-k { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+.goal-h .gl { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.goal-h .gl li { display: grid; gap: 2px; padding-left: 16px; border-left: 3px solid var(--gold); }
+.goal-h .gl b { font-size: 19px; letter-spacing: -0.02em; }
+.goal-h .gl span { color: var(--ink-2); font-size: 15px; }
+.path.main { box-shadow: 0 0 0 2px var(--accent) inset; }
+.btn-sm { display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: #FFCA42; color: #0F4258; font-weight: 700; font-size: 16px; padding: 0 20px; min-height: 48px; text-decoration: none; cursor: pointer; }
+.btn-sm:disabled { opacity: 0.5; }
+.path .ok { font-weight: 700; color: var(--t-strong-ink); background: var(--t-strong); border-radius: 12px; padding: 10px 12px; }
+.path .or-line { margin-top: 4px; }
