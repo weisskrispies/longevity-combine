@@ -611,3 +611,8 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .flourish { opacity: 0.18; }
 .stage { overflow: hidden; }
 .lockup .frame { top: -17%; height: 132%; left: -13%; width: 126%; }
+
+/* Board header v7: title stands clear; illustration lives in the top-right corner */
+.lockup .frame { display: none; }
+.flourish { left: auto; right: -7cqw; top: -10cqh; width: 34cqw; opacity: 0.3; transform: scaleX(-1); -webkit-mask-image: none; mask-image: none; }
+.flourish { -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 74%); mask-image: linear-gradient(to bottom, #000 50%, transparent 74%); }

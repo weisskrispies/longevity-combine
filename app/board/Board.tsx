@@ -19,7 +19,7 @@ const Deco = () => (
   </svg>
 );
 
-/* Sticker illustration, faded into the top-left corner and bleeding off the edges. */
+/* Sticker illustration, faded into the top-right corner and bleeding off the edges. */
 const LEAF = "M0 0 C 9 -12, 27 -12, 36 0 C 27 12, 9 12, 0 0Z";
 const STAR = "M0 -14 L3.5 -3.5 L14 0 L3.5 3.5 L0 14 L-3.5 3.5 L-14 0 L-3.5 -3.5Z";
 const Flourish = () => (
@@ -38,29 +38,6 @@ const Flourish = () => (
     </g>
     <g fill="#FFCA42"><path d={STAR} transform="translate(560 34) scale(1.3)" /><path d={STAR} transform="translate(330 250) scale(0.8)" /><path d={STAR} transform="translate(70 40) scale(0.9)" /></g>
     <g fill="#F4F2EC"><circle cx="300" cy="64" r="5" /><circle cx="600" cy="230" r="4" /><circle cx="150" cy="270" r="4" /><circle cx="500" cy="250" r="3" /></g>
-  </svg>
-);
-
-/* Sticker swashes framing the wordmark. */
-const Frame = () => (
-  <svg className="frame" viewBox="0 0 486 200" aria-hidden="true">
-    <g fill="none" strokeLinecap="round">
-      <path d="M14 46 C 50 22, 110 14, 170 22" stroke="#F4F2EC" strokeWidth="3.5" />
-      <path d="M40 34 C 70 22, 100 18, 128 20" stroke="#B2EBF0" strokeWidth="2" />
-      <path d="M318 26 C 380 24, 430 14, 476 -10" stroke="#B2EBF0" strokeWidth="6" />
-      <path d="M300 16 C 350 14, 390 8, 420 -4" stroke="#F4F2EC" strokeWidth="2.5" />
-      <path d="M34 160 C 8 138, 6 96, 30 74" stroke="#F4F2EC" strokeWidth="3" />
-      <path d="M452 62 C 482 86, 484 134, 456 158 C 444 168, 430 160, 438 150" stroke="#F4F2EC" strokeWidth="3" />
-      <path d="M86 188 C 170 204, 300 176, 404 190" stroke="#F4F2EC" strokeWidth="3" />
-      <path d="M140 196 C 210 204, 290 190, 350 196" stroke="#B2EBF0" strokeWidth="2" />
-    </g>
-    <g fill="#B2EBF0">
-      <path d={LEAF} transform="translate(14 112) rotate(-80) scale(0.7)" />
-      <path d={LEAF} transform="translate(470 92) rotate(80) scale(0.7)" />
-      <path d={LEAF} transform="translate(196 34) rotate(-170) scale(0.6)" />
-    </g>
-    <g fill="#FFCA42"><path d={STAR} transform="translate(22 18) scale(0.55)" /><path d={STAR} transform="translate(468 178) scale(0.6)" /></g>
-    <g fill="#F4F2EC"><circle cx="58" cy="182" r="2.5" /><circle cx="430" cy="196" r="2.5" /><circle cx="250" cy="14" r="2" /></g>
   </svg>
 );
 
@@ -99,7 +76,7 @@ export default function Board() {
         <div className="field-bg"><Deco /><Flourish /></div>
         <div className="b-grid">
           <div className="b-top">
-            <div className="lockup"><Frame /><span className="l1">Longevity</span><span className="l2"><svg className="sw" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 12 C 18 2, 34 14, 58 6" /></svg><span>Combine</span><svg className="sw flip" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 12 C 18 2, 34 14, 58 6" /></svg></span><svg className="spark s1" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg><svg className="spark s2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg></div>
+            <div className="lockup"><span className="l1">Longevity</span><span className="l2"><svg className="sw" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 12 C 18 2, 34 14, 58 6" /></svg><span>Combine</span><svg className="sw flip" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 12 C 18 2, 34 14, 58 6" /></svg></span><svg className="spark s1" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg><svg className="spark s2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg></div>
             <div className="v-title"><span className="rib">{VIEWS.find((v) => v[0] === view)![1]}</span><span className="exp">{EXPLAIN[view]}</span></div>
             <div className="tally"><span className="n num">{data?.count ?? "–"}</span><span className="l">Tested today</span></div>
           </div>
