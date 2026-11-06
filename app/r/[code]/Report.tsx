@@ -4,7 +4,8 @@ import { ORDER, TESTS, TIER, fmt, movementAge, pointsOf, tierOf, unitOf, valueAt
 import { ASPIRE, CLIN, HABITS, NOUN, WHAT, PARTNER_EMAIL } from "@/lib/copy";
 import { Logo } from "@/app/ui";
 
-type Data = { first: string; name: string; age: number; sex: Sex; aspire: string | null; aspire_text: string | null; role: string | null; company: string | null; interest: string | null; unlocked: boolean; scores: Scores | null };
+type Data = { first: string; name: string; age: number; sex: Sex; aspire: string | null; aspire_text: string | null; role: string | null; company: string | null; interest: string | null; unlocked: boolean; scores: Scores | null;
+  standing: { group: string; rank: number; total: number; score: number; top: { rank: number; name: string; score: number; me: boolean }[] } | null };
 const TIERS: Tier[] = ["building", "solid", "strong", "elite"], BOUNDS = [0, 25, 75, 90, 100];
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 const listJoin = (a: string[]) => (a.length <= 1 ? a.join("") : `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}`);
@@ -39,6 +40,11 @@ export default function Report({ code }: { code: string }) {
   const [err, setErr] = useState("");
   const [form, setForm] = useState({ email: "", company: "", title: "" });
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!d?.standing) return;
+    const h = setInterval(() => { if (document.visibilityState === "visible") fetch(`/api/r/${code}`, { cache: "no-store" }).then((r) => r.ok && r.json()).then((j) => j && setD(j)).catch(() => {}); }, 30000);
+    return () => clearInterval(h);
+  }, [code, !!d?.standing]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { fetch(`/api/r/${code}`, { cache: "no-store" }).then(async (r) => { const j = await r.json(); if (r.ok) setD(j); else setErr(j.error); }).catch(() => setErr("Couldn't load your report. Check your connection and refresh.")); }, [code]);
 
   const top = <div className="rp-top"><Logo /><span className="meta">Longevity Combine · HLTH 2026</span></div>;
@@ -119,6 +125,7 @@ export default function Report({ code }: { code: string }) {
         <div className="retest"><span className="d">{retest}</span><span><b>Re-test in four weeks.</b><span className="muted small">Repeat your weakest test at home and compare. Most people see a change.</span></span></div>
         <p className="fine2">General guidance, not a medical prescription. If you have a health condition, check with your clinician first.</p></section>
 
+      {d.standing && <Standing st={d.standing} />}
       <section className="sec"><div className="sec-head"><span className="ov">The detail</span><h2>Your numbers and the research behind them.</h2></div>
         <div className="det">{done.map((t) => (
           <details key={t}><summary><span className="nm">{TESTS[t].name}</span><span className="rv num">{fmt(t, d.scores![t])}{u(t)}</span><span className="chev" aria-hidden="true">›</span></summary>
@@ -165,5 +172,17 @@ function Paths({ code, d, onUpdate }: { code: string; d: Data; onUpdate: (d: Dat
         : partnerSmall}
       {refer}
     </section>
+  );
+}
+
+function Standing({ st }: { st: NonNullable<Data["standing"]> }) {
+  const inTop = st.rank <= 2;
+  return (
+    <section className="sec"><div className="sec-head"><span className="ov">The leaderboard</span><h2>{inTop ? `You're #${st.rank} on the board.` : `You're #${st.rank} of ${st.total} so far.`}</h2>
+        <p>You finished all five, so you&rsquo;re ranked in {st.group.toLowerCase()} by Combine Score: each test scores up to 100 against people your age and sex. This updates live through the end of HLTH.</p></div>
+      <div className="board-mini" aria-live="polite"><div className="bm-head"><span>{st.group}</span><span className="small">{st.total} {st.total === 1 ? "finisher" : "finishers"}</span></div>
+        {st.top.map((r) => <div key={r.rank} className={`bm-row ${r.rank === 1 ? "first" : ""} ${r.me ? "me" : ""}`}><span className="rk">{r.rank}</span><span className="nm">{r.me ? "You" : r.name}</span><span className="sc num">{r.score}</span></div>)}
+        {!inTop && <><div className="bm-gap" aria-hidden="true">···</div><div className="bm-row me"><span className="rk">{st.rank}</span><span className="nm">You</span><span className="sc num">{st.score}</span></div></>}
+      </div></section>
   );
 }
