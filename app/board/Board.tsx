@@ -14,14 +14,7 @@ const ROTATE_MS = 10000, IDLE_MS = 30000, POLL_MS = 5000;
 
 const Deco = () => (
   <svg className="deco" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-hidden="true">
-    <g fill="none" strokeLinecap="round">
-      <path d="M440 30 C 520 6, 620 18, 680 48" stroke="#B2EBF0" strokeOpacity="0.5" strokeWidth="5" />
-      <path d="M-20 860 C 300 790, 560 900, 900 840 S 1400 770, 1640 820" stroke="#B2EBF0" strokeOpacity="0.18" strokeWidth="7" />
-      <path d="M1380 60 C 1450 30, 1530 50, 1560 100" stroke="#F4F2EC" strokeOpacity="0.35" strokeWidth="5" />
-    </g>
-    <g fill="#B2EBF0" fillOpacity="0.55"><path d="M680 48 q 18 -22 36 0 q -18 22 -36 0z" /><path d="M40 80 q 14 -18 28 0 q -14 18 -28 0z" /></g>
-    <g fill="#FFCA42"><path d="M500 60 l6 18 18 6 -18 6 -6 18 -6 -18 -18 -6 18 -6z" /><path d="M1540 150 l5 14 14 5 -14 5 -5 14 -5 -14 -14 -5 14 -5z" /></g>
-    <g fill="#F4F2EC" fillOpacity="0.55"><circle cx="410" cy="60" r="4" /><circle cx="1350" cy="250" r="3" /></g>
+    <path d="M-20 870 C 300 820, 560 900, 900 855 S 1400 800, 1640 840" fill="none" stroke="#B2EBF0" strokeOpacity="0.14" strokeWidth="6" strokeLinecap="round" />
   </svg>
 );
 
@@ -55,7 +48,6 @@ export default function Board() {
     <section className="b-shell kiosk" onPointerDown={touch}>
       <div className="stage" id="stage">
         <div className="field-bg"><Deco /></div>
-        {!auto && <span className="b-paused">Exploring · rotation resumes soon</span>}
         <div className="b-grid">
           <div className="b-top">
             <div className="lockup"><span className="l1">Longevity</span><span className="l2">Combine</span></div>

@@ -508,3 +508,11 @@ button { cursor: pointer; }
 .hero2 h1 { font-size: clamp(24px, 4.8vw, 32px); line-height: 1.12; max-width: 20ch; }
 .age-band .n { font-size: 56px; }
 @media (max-width: 480px) { .hero2 h1 { font-size: 24px; } .age-band .n { font-size: 48px; } }
+
+/* Board header v2: clean lockup, no stray ornaments */
+.lockup .l1 { font-family: var(--display); font-weight: 900; font-size: 8.6cqh; line-height: 0.88; color: #FFCA42; letter-spacing: 0.04em; text-shadow: none; }
+.lockup .l2 { font-size: 3.6cqh; letter-spacing: 0.42em; margin-top: 0.4cqh; }
+.b-top { align-items: center; gap: 3.6cqw; }
+.v-title { gap: 1.4cqh; padding-left: 3cqw; border-left: 0.25cqh solid rgba(178, 235, 240, 0.3); }
+.v-title .rib { box-shadow: none; border-radius: 1cqh; padding: 0.9cqh 1.6cqw 0.7cqh; }
+.v-title .exp { font-size: 2cqh; color: #B2EBF0; }
