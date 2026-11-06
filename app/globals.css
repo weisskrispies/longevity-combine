@@ -584,3 +584,14 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .pb .pb-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 @media (min-width: 760px) { .pb .pb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .pb .panel ul, .pb .panel ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 16px; line-height: 1.45; }
+
+/* Board header v4: header items are stickers on the board */
+.b-top { grid-template-columns: auto minmax(0, 1fr) auto; gap: 3cqw; align-items: center; }
+.lockup { background: #0A3346; border: 0.6cqh solid #F4F2EC; border-radius: 3.6cqh; padding: 1.6cqh 2.6cqw 1.4cqh; box-shadow: 0 0.8cqh 2.4cqh rgba(0, 0, 0, 0.35); transform: rotate(-2deg); }
+.lockup .l1 { font-size: 8cqh; }
+.lockup .s1 { top: 0.8cqh; right: 1cqw; width: 2.2cqh; height: 2.2cqh; }
+.lockup .s2 { top: 3.4cqh; right: 0.4cqw; }
+.v-title { border-left: 0; padding-left: 0; gap: 1.2cqh; }
+.v-title .rib { background: #F4F2EC; color: #0F4258; border-radius: 1.6cqh; padding: 1cqh 2cqw 0.8cqh; box-shadow: 0 0 0 0.45cqh #FFCA42, 0 0.8cqh 2cqh rgba(0, 0, 0, 0.3); transform: rotate(1deg); }
+.v-title .exp { padding-left: 0.4cqw; }
+@media (prefers-reduced-motion: reduce) { .lockup, .v-title .rib { transform: none; } }
