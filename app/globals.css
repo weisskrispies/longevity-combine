@@ -616,3 +616,4 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .lockup .frame { display: none; }
 .flourish { left: auto; right: -7cqw; top: -10cqh; width: 34cqw; opacity: 0.3; transform: scaleX(-1); -webkit-mask-image: none; mask-image: none; }
 .flourish { -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 74%); mask-image: linear-gradient(to bottom, #000 50%, transparent 74%); }
+.lockup .sw path { stroke: #F4F2EC; stroke-width: 2.6; }

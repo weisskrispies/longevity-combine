@@ -76,7 +76,7 @@ export default function Board() {
         <div className="field-bg"><Deco /><Flourish /></div>
         <div className="b-grid">
           <div className="b-top">
-            <div className="lockup"><span className="l1">Longevity</span><span className="l2"><svg className="sw" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 12 C 18 2, 34 14, 58 6" /></svg><span>Combine</span><svg className="sw flip" viewBox="0 0 60 16" aria-hidden="true"><path d="M2 12 C 18 2, 34 14, 58 6" /></svg></span><svg className="spark s1" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg><svg className="spark s2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg></div>
+            <div className="lockup"><span className="l1">Longevity</span><span className="l2"><svg className="sw" viewBox="0 0 60 16" aria-hidden="true"><path d="M4 5 H58 M14 11 H58" /></svg><span>Combine</span><svg className="sw flip" viewBox="0 0 60 16" aria-hidden="true"><path d="M4 5 H58 M14 11 H58" /></svg></span><svg className="spark s1" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg><svg className="spark s2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg></div>
             <div className="v-title"><span className="rib">{VIEWS.find((v) => v[0] === view)![1]}</span><span className="exp">{EXPLAIN[view]}</span></div>
             <div className="tally"><span className="n num">{data?.count ?? "–"}</span><span className="l">Tested today</span></div>
           </div>
