@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, emailOk } from "@/lib/server";
 import { sendReportEmail } from "@/lib/email";
-import { BRACKETS, bracketOf, combine, isFull, type Sex } from "@/lib/norms";
+import { BRACKETS, bracketOf, combine, displayName, isFull, type Sex } from "@/lib/norms";
 
 export const dynamic = "force-dynamic";
 const COLS = "id, code, name, age, sex, aspire, aspire_text, role, company, scores, email, emailed_at, interest";
@@ -17,7 +17,7 @@ async function load(code: string): Promise<Row | null> {
 }
 // Never send the email itself back; only whether the report is unlocked.
 const shape = (v: Row) => ({
-  first: v.name.split(" ")[0], name: v.name, age: v.age, sex: v.sex, aspire: v.aspire, aspire_text: v.aspire_text,
+  first: v.name.split(" ")[0], name: displayName(v.name), age: v.age, sex: v.sex, aspire: v.aspire, aspire_text: v.aspire_text,
   role: v.role, company: v.company, interest: v.interest, unlocked: !!v.email, scores: v.email ? v.scores : null,
 });
 
@@ -32,7 +32,7 @@ async function standing(v: Row) {
   const rank = field.findIndex((x) => x.id === v.id) + 1;
   return {
     group: `${v.sex === "F" ? "Women" : "Men"}, ${br[1]}`, rank, total: field.length, score: combine(me),
-    top: field.slice(0, 2).map((x, i) => ({ rank: i + 1, name: x.id === v.id || x.opt_in ? x.name : "Hidden", score: x.s, me: x.id === v.id })),
+    top: field.slice(0, 2).map((x, i) => ({ rank: i + 1, name: x.id === v.id || x.opt_in ? displayName(x.name) : "Hidden", score: x.s, me: x.id === v.id })),
   };
 }
 

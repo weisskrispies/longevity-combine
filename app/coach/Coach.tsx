@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { ORDER, TESTS, TIER, fmt, isFull, percentile, tierOf, unitOf, combine, clampScore, type Scores, type Sex, type TestId } from "@/lib/norms";
+import { ORDER, TESTS, TIER, displayName, fmt, isFull, percentile, tierOf, unitOf, combine, clampScore, type Scores, type Sex, type TestId } from "@/lib/norms";
 import { ASPIRE, ROLES } from "@/lib/copy";
 import { Logo, Waves, useToast } from "@/app/ui";
 
@@ -119,10 +119,10 @@ function Steps({ at, onClose }: { at: number; onClose: () => void }) {
 }
 
 function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCreated: (v: Visitor) => void; show: (m: string) => void }) {
-  const [d, setD] = useState({ name: "", age: "", sex: "", opt_in: true, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
+  const [d, setD] = useState({ first: "", last: "", age: "", sex: "", opt_in: true, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: unknown) => setD((x) => ({ ...x, [k]: v }));
-  const age = Number(d.age), ok = d.name.trim() && age >= 18 && age <= 105 && d.sex && (!d.giveaway || emailOk(d.email));
+  const age = Number(d.age), ok = d.first.trim() && age >= 18 && age <= 105 && d.sex && (!d.giveaway || emailOk(d.email));
   const chip = (name: string, val: string, label: string) => (
     <span key={val}><input type="radio" name={name} id={`${name}-${val}`} checked={(d as Record<string, unknown>)[name] === val} onChange={() => set(name, val)} /><label htmlFor={`${name}-${val}`}>{label}</label></span>
   );
@@ -133,7 +133,7 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
   const submit = async () => {
     if (!ok || busy) return; setBusy(true);
     try {
-      const r = await fetch("/api/coach/visitors", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...d, age, email: d.giveaway ? d.email : null, aspire: d.aspire.join(",") || null, aspire_text: d.aspire.includes("other") ? d.aspire_text : null, role: d.role || null }) });
+      const r = await fetch("/api/coach/visitors", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...d, name: `${d.first.trim()} ${d.last.trim()}`.trim(), age, email: d.giveaway ? d.email : null, aspire: d.aspire.join(",") || null, aspire_text: d.aspire.includes("other") ? d.aspire_text : null, role: d.role || null }) });
       const j = await r.json(); if (!r.ok) throw new Error(j.error); onCreated(j.visitor);
     } catch (e) { show(e instanceof Error && e.message ? e.message : "Couldn't save. Check the WiFi and try again."); } finally { setBusy(false); }
   };
@@ -142,13 +142,16 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
       <div className="s-body"><h2 className="s-title" id="s-title">Who's stepping up?</h2>
         <div className="cols">
           <div className="panel">
-            <div className="field"><label htmlFor="f-name">First name and last initial</label><input className="input" id="f-name" autoFocus autoComplete="off" autoCapitalize="words" enterKeyHint="next" placeholder="Linda R." value={d.name} onChange={(e) => set("name", e.target.value)} /></div>
+            <div className="grid2">
+              <div className="field"><label htmlFor="f-name">First name</label><input className="input" id="f-name" autoFocus autoComplete="off" autoCapitalize="words" enterKeyHint="next" placeholder="Linda" value={d.first} onChange={(e) => set("first", e.target.value)} /></div>
+              <div className="field"><label htmlFor="f-last">Last name <span className="opt">optional</span></label><input className="input" id="f-last" autoComplete="off" autoCapitalize="words" enterKeyHint="next" placeholder="Rogers" value={d.last} onChange={(e) => set("last", e.target.value)} /></div>
+            </div>
             <div className="grid2">
               <div className="field"><label htmlFor="f-age">Age</label><input className="input num" id="f-age" type="number" inputMode="numeric" min={18} max={105} placeholder="64" value={d.age} onChange={(e) => set("age", e.target.value)} /></div>
               <div className="field"><span className="lab">Sex</span><div className="chips seg">{chip("sex", "F", "Female")}{chip("sex", "M", "Male")}</div></div>
             </div>
             <div>
-              <label className="switch" htmlFor="f-opt"><span><b>Show on the leaderboard</b><span>First name and last initial only</span></span><input type="checkbox" id="f-opt" checked={d.opt_in} onChange={(e) => set("opt_in", e.target.checked)} /></label>
+              <label className="switch" htmlFor="f-opt"><span><b>Show on the leaderboard</b><span>As {d.first.trim() ? displayName(`${d.first} ${d.last}`) : "first name and last initial"}</span></span><input type="checkbox" id="f-opt" checked={d.opt_in} onChange={(e) => set("opt_in", e.target.checked)} /></label>
               <label className="switch" htmlFor="f-give"><span><b>Enter the speaker giveaway</b><span>Top Combine Score in each age group wins. Needs an email.</span></span><input type="checkbox" id="f-give" checked={d.giveaway} onChange={(e) => set("giveaway", e.target.checked)} /></label>
               {d.giveaway && <div className="field"><label htmlFor="f-email">Email</label><input className="input" id="f-email" type="email" inputMode="email" autoComplete="off" placeholder="name@company.com" value={d.email} onChange={(e) => set("email", e.target.value)} /></div>}
             </div>
