@@ -82,9 +82,12 @@ export default function Coach() {
         {errBox}
         <div className="c-home">
           <section className="c-hero"><Waves />
-            <h1>Ready for the next visitor?</h1>
-            <p>Takes about 20 seconds: name, age, and what they want to be doing at 85.</p>
             <button className="btn gold" onClick={() => setMode("visitor")}>Set up new visitor</button>
+            <div className="openers"><span className="ok">Pull people in</span>
+              <p>&ldquo;Want to see how your grip stacks up for your age?&rdquo;</p>
+              <p>&ldquo;Most people can&rsquo;t stand on one leg for 10 seconds with their eyes closed. Want to try?&rdquo;</p>
+              <span className="ok">Then pivot</span>
+              <p>&ldquo;These are the measures our PTs track with Medicare members. Who do you work with?&rdquo;</p></div>
           </section>
           <section className="c-find">
             <div className="head"><h2 className="eyebrow">{q ? "Search results" : "Recent visitors"}</h2>

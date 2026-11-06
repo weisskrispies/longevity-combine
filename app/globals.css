@@ -558,3 +558,11 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .ptier.building { background: #E7ECEE; color: #3E5966; } .ptier.solid { background: #DDF3F5; color: #0F4E66; }
 .ptier.strong { background: #DCF7DE; color: #1E5B2A; } .ptier.elite { background: #FFEDBD; color: #6B4A00; }
 .pnote { font-size: 1.9cqh; color: #4C6874; margin: 0; }
+
+/* Coach home: action first, floor openers as a quiet reminder; waves span the full width */
+.c-hero { gap: 24px; align-content: start; }
+.c-hero > svg { position: absolute; left: 0; right: auto; bottom: 0; width: 100%; max-width: none; height: 38%; }
+.c-hero .btn { min-height: 72px; font-size: 22px; padding: 0 40px; position: relative; }
+.openers { position: relative; display: grid; gap: 8px; max-width: 44ch; }
+.openers .ok { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: #FFCA42; margin-top: 6px; }
+.openers p { color: #F4F2EC; font-size: 17px; line-height: 1.4; max-width: none; }
