@@ -41,13 +41,18 @@ export default function Coach() {
   useEffect(() => { refresh(""); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const t = setTimeout(() => authed && refresh(q), 250); return () => clearTimeout(t); }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const flushing = useRef(false);
   const flush = useCallback(async () => {
+    if (flushing.current) return; // one flush at a time, so a queued save is never sent twice
+    flushing.current = true;
+    try {
     const queue = loadQ(); const ids = Object.keys(queue); setPending(ids.length);
     for (const id of ids) {
       try { const r = await fetch(`/api/coach/visitors/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(queue[id]) });
         if (r.ok || r.status === 400) { const nq = loadQ(); delete nq[id]; saveQ(nq); } } catch { /* stay queued */ }
     }
     setPending(Object.keys(loadQ()).length);
+    } finally { flushing.current = false; }
   }, []);
   useEffect(() => { flush(); const h = setInterval(flush, 5000); window.addEventListener("online", flush); return () => { clearInterval(h); window.removeEventListener("online", flush); }; }, [flush]);
 
