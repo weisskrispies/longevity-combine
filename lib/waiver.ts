@@ -6,7 +6,7 @@
  * and the server refuses signatures from a page still showing an older version.
  */
 export const WAIVER = {
-  version: "placeholder-2026-11-12",
+  version: "placeholder-2026-11-12b",
   text: `PLACEHOLDER TEXT. REPLACE WITH COUNSEL'S FINAL VERSION BEFORE THE SHOW.
 
 Release and Waiver of Liability: The Longevity Combine at HLTH 2026
@@ -23,7 +23,7 @@ I am choosing to take part in the Longevity Combine, a set of short physical tes
 
 5. To the fullest extent the law allows, I release Groove, its clinicians, staff, contractors, and event partners from claims arising from my taking part, except claims caused by gross negligence or willful misconduct.
 
-6. Groove will store the information I give and my results to show me my report and, if I agree below, to show me on the leaderboard, use photos or video of me, or email me my results. Groove will not sell my information.
+6. Groove will store the information I give and my results to show me my report and, if I opt in below, to enter me in the speaker giveaway or email me my results. If I choose to appear on the leaderboard, it shows my first name and last initial. Groove will not sell my information.
 
 7. If any part of this release is found unenforceable, the rest still applies.
 

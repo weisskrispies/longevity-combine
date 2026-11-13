@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const row = {
     signed_name: name, version: WAIVER.version, agreed: true,
     device: (req.headers.get("user-agent") || "").slice(0, 300) || null,
-    consent_leaderboard: !!b.consent_leaderboard, consent_media: !!b.consent_media, consent_email: !!b.consent_email, consent_giveaway: !!b.consent_giveaway, email,
+    consent_email: !!b.consent_email, consent_giveaway: !!b.consent_giveaway, email,
   };
   const { data: w, error } = await db().from("waivers").insert(row).select("id, signed_name, signed_at, consent_leaderboard, consent_media, consent_email, consent_giveaway, email").single();
   if (error) return NextResponse.json({ error: /waivers/.test(error.message) ? "The waiver table isn't set up. Run the v3 SQL in Supabase." : error.message }, { status: 500 });
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (typeof b.visitor_id === "string") {
     const { data: v } = await db().from("visitors").select("id, email").eq("id", b.visitor_id).single();
     if (v) {
-      await db().from("visitors").update({ waiver_id: w.id, opt_in: w.consent_leaderboard, email_results: w.consent_email, ...(w.consent_giveaway ? { giveaway: true } : {}), ...(email && !v.email ? { email, email_source: "waiver" } : {}) }).eq("id", v.id);
+      await db().from("visitors").update({ waiver_id: w.id, email_results: w.consent_email, ...(w.consent_giveaway ? { giveaway: true } : {}), ...(email && !v.email ? { email, email_source: "waiver" } : {}) }).eq("id", v.id);
       await db().from("waivers").update({ visitor_id: v.id }).eq("id", w.id);
     }
   }

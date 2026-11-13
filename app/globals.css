@@ -670,3 +670,30 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .wv-name, .wv-email { min-height: 60px; }
 .wv-head { padding-block: 14px 4px; }
 .wv-body { padding-block: 8px 14px; }
+
+/* Waiver v3: on brand. Deep teal stage, cream paper, gold actions (matches the board and sticker). */
+.wv-modal { background: radial-gradient(120% 90% at 0% 0%, #155A75 0%, #0F4258 45%, #0A3346 100%); color: #F4F2EC; }
+.wv-modal .sheet-in.wv { position: relative; }
+.wv-modal .wv-head { display: grid; gap: 10px; padding-block: 22px 6px; padding-right: 64px; }
+.wv-brand { display: flex; align-items: center; gap: 12px; color: #B2EBF0; font-weight: 700; font-size: 16px; }
+.wv-brand img { height: 26px; width: auto; }
+.wv-brand span { padding-left: 12px; border-left: 1px solid rgba(178, 235, 240, 0.35); }
+.wv-modal .wv-head h2 { color: #FFCA42; font-size: 52px; margin: 0; letter-spacing: 0.02em; }
+.wv-x { position: absolute; top: 20px; right: 0; width: 48px; height: 48px; border-radius: 50%; border: 0; background: rgba(244, 242, 236, 0.12); color: #F4F2EC; font-size: 26px; cursor: pointer; }
+.wv-modal .wv-text { background: #F4F2EC; color: #0F4258; border: 0; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.wv-modal .wv-text p:first-child { color: #A86F00; }
+.wv-modal .wv-form .field label { color: #F4F2EC; }
+.wv-modal .wv-name, .wv-modal .wv-email { background: #FFFFFF; border: 2px solid transparent; color: #0F4258; }
+.wv-modal .wv-name:focus, .wv-modal .wv-email:focus { border-color: #FFCA42; outline: none; }
+.wv-modal .wv-name::placeholder, .wv-modal .wv-email::placeholder { color: #8FA3AB; }
+.wv-modal .wv-check { background: rgba(244, 242, 236, 0.08); border: 2px solid rgba(244, 242, 236, 0.22); color: #F4F2EC; }
+.wv-modal .wv-check.req { border-color: rgba(255, 202, 66, 0.6); }
+.wv-modal .wv-check input { border-color: rgba(244, 242, 236, 0.7); background: transparent; }
+.wv-modal .wv-check input:checked { background: #FFCA42; border-color: #FFCA42; }
+.wv-modal .wv-check input:checked::after { border-color: #0F4258; }
+.wv-modal .wv-check:has(input:checked) { background: rgba(255, 202, 66, 0.14); border-color: #FFCA42; }
+.wv-modal .wv-opt { color: #B2EBF0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; font-weight: 900; margin-top: 14px; }
+.wv-modal .wv-foot { background: transparent; border-top: 1px solid rgba(244, 242, 236, 0.15); align-items: center; }
+.wv-modal .wv-foot .wv-go { flex: 1; }
+.wv-modal .wv-go:disabled { opacity: 1; background: rgba(244, 242, 236, 0.16); color: rgba(244, 242, 236, 0.55); }
+.wv-skip { background: none; border: 0; color: #B2EBF0; font: inherit; font-weight: 700; font-size: 17px; padding: 0 18px; min-height: 56px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
