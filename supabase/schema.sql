@@ -40,3 +40,21 @@ for each row execute function public.touch_updated_at();
 -- v2 (Nov 5): follow-up interest flag and results-email tracking
 alter table public.visitors add column if not exists interest text;
 alter table public.visitors add column if not exists emailed_at timestamptz;
+
+-- v3 (Nov 12): participant waiver, signed on the iPad before any test
+create table if not exists public.waivers (
+  id uuid primary key default gen_random_uuid(),
+  visitor_id uuid references public.visitors(id) on delete set null,
+  signed_name text not null,
+  signed_at timestamptz not null default now(),
+  version text not null,
+  device text,
+  agreed boolean not null,
+  consent_leaderboard boolean not null default false,
+  consent_media boolean not null default false,
+  consent_email boolean not null default false,
+  email text
+);
+alter table public.waivers enable row level security;
+alter table public.visitors add column if not exists waiver_id uuid references public.waivers(id);
+alter table public.visitors add column if not exists email_results boolean not null default false;

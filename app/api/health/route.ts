@@ -15,7 +15,9 @@ export async function GET() {
   if (url && key) {
     const sb = createClient(url, key, { auth: { persistSession: false } });
     const { error } = await sb.from("visitors").select("id").limit(1);
-    if (!error) { const v2 = await sb.from("visitors").select("emailed_at, interest").limit(1); out.schema_v2 = v2.error ? "MISSING: run the two ALTER TABLE lines (emailed_at, interest) in the SQL Editor" : "ok"; }
+    if (!error) { const v2 = await sb.from("visitors").select("emailed_at, interest").limit(1); out.schema_v2 = v2.error ? "MISSING: run the two ALTER TABLE lines (emailed_at, interest) in the SQL Editor" : "ok";
+      const v3a = await sb.from("waivers").select("id").limit(1), v3b = await sb.from("visitors").select("waiver_id, email_results").limit(1);
+      out.schema_v3_waiver = v3a.error || v3b.error ? "MISSING: run the v3 waiver SQL (bottom of supabase/schema.sql) in the SQL Editor" : "ok"; }
     out.database = error ? (/does not exist|schema cache/.test(error.message) || error.code === "42P01" || error.code === "PGRST205" ? "TABLE MISSING: run supabase/schema.sql in the SQL Editor" : `ERROR: ${error.message.split(key).join("[key]").slice(0, 200)}`) : "ok";
   } else out.database = "not checked";
   out.ready = Object.values(out).every((v) => !/MISSING|WRONG|ERROR/.test(v)) ? "yes" : "no";

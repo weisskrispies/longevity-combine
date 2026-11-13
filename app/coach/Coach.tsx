@@ -4,10 +4,12 @@ import QRCode from "qrcode";
 import { ORDER, TESTS, TIER, displayName, tierFor, fmt, isFull, percentile, tierOf, unitOf, combine, clampScore, type Scores, type Sex, type TestId } from "@/lib/norms";
 import { ASPIRE, ROLES } from "@/lib/copy";
 import { Logo, Waves, useToast } from "@/app/ui";
+import { WAIVER } from "@/lib/waiver";
 
 type Floor = { dn: number; dw: number; un: number; uw: number };
-type Visitor = { id: string; code: string; name: string; age: number; sex: Sex; opt_in: boolean; giveaway: boolean; email: string | null; aspire: string | null; aspire_text: string | null; role: string | null; scores: Scores; floor_detail: Floor | null };
-type Mode = "home" | "visitor" | "scores" | "results" | "playbook";
+type Visitor = { id: string; code: string; name: string; age: number; sex: Sex; opt_in: boolean; giveaway: boolean; email: string | null; aspire: string | null; aspire_text: string | null; role: string | null; scores: Scores; floor_detail: Floor | null; waiver_id: string | null; email_results: boolean };
+type Signed = { id: string; signed_name: string; consent_leaderboard: boolean; consent_media: boolean; consent_email: boolean; email: string | null };
+type Mode = "home" | "waiver" | "visitor" | "scores" | "results" | "playbook";
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const SITE = typeof window !== "undefined" ? window.location.origin : "https://combine.groovehealth.com";
 
@@ -25,6 +27,7 @@ export default function Coach() {
   const [mode, setMode] = useState<Mode>("home");
   const [cur, setCur] = useState<Visitor | null>(null);
   const [pending, setPending] = useState(0);
+  const [signed, setSigned] = useState<Signed | null>(null);
   const [toast, show] = useToast();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -49,7 +52,7 @@ export default function Coach() {
     const queue = loadQ(); const ids = Object.keys(queue); setPending(ids.length);
     for (const id of ids) {
       try { const r = await fetch(`/api/coach/visitors/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(queue[id]) });
-        if (r.ok || r.status === 400) { const nq = loadQ(); delete nq[id]; saveQ(nq); } } catch { /* stay queued */ }
+        if (r.ok || r.status === 400 || r.status === 403) { const nq = loadQ(); delete nq[id]; saveQ(nq); } } catch { /* stay queued */ }
     }
     setPending(Object.keys(loadQ()).length);
     } finally { flushing.current = false; }
@@ -76,8 +79,14 @@ export default function Coach() {
       </form>{errBox}{toast}</div>
   );
 
-  const open = (v: Visitor) => { setCur(v); setMode("results"); };
-  const close = () => { setMode("home"); setCur(null); refresh(); };
+  const open = (v: Visitor) => { setCur(v); setMode(v.waiver_id ? "results" : "waiver"); };
+  const close = () => { setMode("home"); setCur(null); setSigned(null); refresh(); };
+  const toScores = () => setMode(cur?.waiver_id ? "scores" : "waiver");
+  const onSigned = (w: Signed) => {
+    if (cur) { setCur({ ...cur, waiver_id: w.id, opt_in: w.consent_leaderboard, email_results: w.consent_email, email: cur.email || w.email }); setMode("scores"); }
+    else { setSigned(w); setMode("visitor"); }
+    show("Signed. Please hand the iPad back to the coach.");
+  };
 
   return (
     <>
@@ -90,8 +99,8 @@ export default function Coach() {
             <section className="c-hero"><Waves />
               <span className="ov">Next visitor</span>
               <h1>Who&rsquo;s stepping up?</h1>
-              <p>Name, age and sex, then scores as they finish each test.</p>
-              <button className="btn gold" onClick={() => setMode("visitor")}>Set up new visitor</button>
+              <p>They sign the waiver on the iPad, then you add age and sex and enter scores.</p>
+              <button className="btn gold" onClick={() => { setCur(null); setSigned(null); setMode("waiver"); }}>New visitor: start waiver</button>
             </section>
             <section className="c-tips">
               <span className="eyebrow">On the floor</span>
@@ -118,9 +127,10 @@ export default function Coach() {
       {mode !== "home" && (
         <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="s-title">
           {mode === "playbook" && <Playbook onClose={() => setMode("home")} />}
-          {mode === "visitor" && <VisitorStep onClose={close} onCreated={(v) => { setCur(v); setMode("scores"); }} show={show} />}
+          {mode === "waiver" && <WaiverStep forName={cur?.name} visitorId={cur?.id} onClose={close} onSigned={onSigned} show={show} />}
+          {mode === "visitor" && signed && <VisitorStep waiver={signed} onClose={close} onCreated={(v) => { setCur(v); setMode("scores"); }} show={show} />}
           {mode === "scores" && cur && <ScoresStep v={cur} onScores={updateScores} onClose={() => { show("Saved. Search their name to pick up where you left off."); close(); }} onNext={() => setMode("results")} />}
-          {mode === "results" && cur && <ResultsStep v={cur} onEdit={() => setMode("scores")} onClose={close} onEmail={(email, quiet) => { const v = { ...cur, email }; setCur(v); queuePatch(v, { email }); if (!quiet) show(`Saved. ${cur.name.split(" ")[0]}'s results are on their way to ${email}.`); }} />}
+          {mode === "results" && cur && <ResultsStep v={cur} onEdit={toScores} onClose={close} onEmail={(email, quiet) => { const v = { ...cur, email }; setCur(v); queuePatch(v, { email }); if (!quiet) show(`Saved. ${cur.name.split(" ")[0]}'s results are on their way to ${email}.`); }} />}
         </div>
       )}
       {toast}
@@ -136,8 +146,46 @@ function Steps({ at, onClose }: { at: number; onClose: () => void }) {
   );
 }
 
-function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCreated: (v: Visitor) => void; show: (m: string) => void }) {
-  const [d, setD] = useState({ first: "", last: "", age: "", sex: "", opt_in: true, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
+function WaiverStep({ forName, visitorId, onClose, onSigned, show }: { forName?: string; visitorId?: string; onClose: () => void; onSigned: (w: Signed) => void; show: (m: string) => void }) {
+  const [agreed, setAgreed] = useState(false), [name, setName] = useState(""), [lb, setLb] = useState(false), [media, setMedia] = useState(false), [mail, setMail] = useState(false), [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const full = name.trim().split(/\s+/).length >= 2, ok = agreed && full && (!mail || emailOk(email.trim()));
+  const submit = async () => {
+    if (!ok || busy) return; setBusy(true);
+    try {
+      const r = await fetch("/api/coach/waivers", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: WAIVER.version, agreed, name, consent_leaderboard: lb, consent_media: media, consent_email: mail, email: mail ? email.trim() : null, visitor_id: visitorId }) });
+      const j = await r.json().catch(() => ({}));
+      if (j.reload) { show(j.error); setTimeout(() => location.reload(), 1200); return; }
+      if (!r.ok) throw new Error(j.error); onSigned(j.waiver);
+    } catch (e) { show(e instanceof Error && e.message ? e.message : "Couldn't save. Check the WiFi and try again."); } finally { setBusy(false); }
+  };
+  const box = (id: string, on: boolean, set: (b: boolean) => void, label: React.ReactNode, req = false) => (
+    <label className={`wv-check ${req ? "req" : ""}`} htmlFor={id}><input type="checkbox" id={id} checked={on} onChange={(e) => set(e.target.checked)} /><span>{label}</span></label>
+  );
+  return (
+    <div className="sheet-in wv">
+      <div className="wv-head"><div><p className="eyebrow">{forName ? `Waiver for ${forName}` : "Before you start"}</p><h2 id="s-title">Read and sign the release</h2></div>
+        <button className="x" onClick={onClose} aria-label="Cancel, for staff">×</button></div>
+      <div className="wv-body">
+        <div className="wv-text" tabIndex={0} role="document" aria-label="Release and waiver text">{WAIVER.text.split(/\n\n+/).map((para, i) => <p key={i}>{para}</p>)}</div>
+        <div className="wv-form">
+          {box("wv-agree", agreed, setAgreed, <b>I have read and agree to the release</b>, true)}
+          <div className="field"><label htmlFor="wv-name">Type your full name</label><input className="input wv-name" id="wv-name" autoComplete="off" autoCapitalize="words" autoCorrect="off" spellCheck={false} enterKeyHint="done" placeholder="First and last name" value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <p className="wv-opt">Optional. Check any you&rsquo;re OK with.</p>
+          {box("wv-lb", lb, setLb, "Show my first name and last initial on the leaderboard")}
+          {box("wv-media", media, setMedia, "Use photos or video of me for Groove social and ads")}
+          {box("wv-mail", mail, setMail, "Email me my results")}
+          {mail && <input className="input wv-email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" aria-label="Email for your results" placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />}
+        </div>
+      </div>
+      <div className="s-foot"><button className="btn wv-go" disabled={!ok || busy} onClick={submit}>{busy ? "Saving…" : "Sign and continue"}</button></div>
+    </div>
+  );
+}
+
+function VisitorStep({ waiver, onClose, onCreated, show }: { waiver: Signed; onClose: () => void; onCreated: (v: Visitor) => void; show: (m: string) => void }) {
+  const [n0, ...nRest] = waiver.signed_name.split(" ");
+  const [d, setD] = useState({ first: n0, last: nRest.join(" "), age: "", sex: "", giveaway: false, email: waiver.email || "", aspire: [] as string[], aspire_text: "", role: "" });
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: unknown) => setD((x) => ({ ...x, [k]: v }));
   const age = Number(d.age), ok = d.first.trim() && age >= 18 && age <= 105 && d.sex && (!d.giveaway || emailOk(d.email));
@@ -151,7 +199,7 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
   const submit = async () => {
     if (!ok || busy) return; setBusy(true);
     try {
-      const r = await fetch("/api/coach/visitors", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...d, name: `${d.first.trim()} ${d.last.trim()}`.trim(), age, email: d.giveaway ? d.email : null, aspire: d.aspire.join(",") || null, aspire_text: d.aspire.includes("other") ? d.aspire_text : null, role: d.role || null }) });
+      const r = await fetch("/api/coach/visitors", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...d, waiver_id: waiver.id, name: `${d.first.trim()} ${d.last.trim()}`.trim(), age, email: d.giveaway ? d.email : null, aspire: d.aspire.join(",") || null, aspire_text: d.aspire.includes("other") ? d.aspire_text : null, role: d.role || null }) });
       const j = await r.json(); if (!r.ok) throw new Error(j.error); onCreated(j.visitor);
     } catch (e) { show(e instanceof Error && e.message ? e.message : "Couldn't save. Check the WiFi and try again."); } finally { setBusy(false); }
   };
@@ -169,7 +217,10 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
               <div className="field"><span className="lab">Sex</span><div className="chips seg">{chip("sex", "F", "Female")}{chip("sex", "M", "Male")}</div></div>
             </div>
             <div>
-              <label className="switch" htmlFor="f-opt"><span><b>Show on the leaderboard</b><span>As {d.first.trim() ? displayName(`${d.first} ${d.last}`) : "first name and last initial"}</span></span><input type="checkbox" id="f-opt" checked={d.opt_in} onChange={(e) => set("opt_in", e.target.checked)} /></label>
+              <div className="consents"><span className="lab">From the waiver</span>
+                <span className={waiver.consent_leaderboard ? "on" : ""}>{waiver.consent_leaderboard ? `On the leaderboard as ${displayName(`${d.first} ${d.last}`)}` : "Not on the leaderboard"}</span>
+                <span className={waiver.consent_media ? "on" : ""}>{waiver.consent_media ? "Photos and video OK" : "No photos or video"}</span>
+                <span className={waiver.consent_email ? "on" : ""}>{waiver.consent_email ? "Email their results" : "No results email"}</span></div>
               <label className="switch" htmlFor="f-give"><span><b>Enter the speaker giveaway</b><span>Top Combine Score in each age group wins. Needs an email.</span></span><input type="checkbox" id="f-give" checked={d.giveaway} onChange={(e) => set("giveaway", e.target.checked)} /></label>
               {d.giveaway && <div className="field"><label htmlFor="f-email">Email</label><input className="input" id="f-email" type="email" inputMode="email" autoComplete="off" placeholder="name@company.com" value={d.email} onChange={(e) => set("email", e.target.value)} /></div>}
             </div>
@@ -243,7 +294,7 @@ function ResultsStep({ v, onEdit, onClose, onEmail }: { v: Visitor; onEdit: () =
   const [qr, setQr] = useState(""); const [email, setEmail] = useState(v.email || "");
   const url = `${SITE}/r/${v.code}`;
   useEffect(() => { QRCode.toDataURL(url, { width: 480, margin: 1, color: { dark: "#0F4258", light: "#FFFFFF" } }).then(setQr); }, [url]);
-  useEffect(() => { if (v.email) onEmail(v.email, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (v.email && v.email_results) onEmail(v.email, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const p = { age: v.age, sex: v.sex, scores: v.scores };
   return (
     <div className="sheet-in"><Steps at={2} onClose={onClose} />

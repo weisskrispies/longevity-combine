@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, isCoach, newCode, emailOk } from "@/lib/server";
 
 export const dynamic = "force-dynamic";
-const COLS = "id, code, name, age, sex, opt_in, giveaway, email, company, title, aspire, aspire_text, role, scores, floor_detail, created_at";
+const COLS = "id, code, name, age, sex, opt_in, giveaway, email, company, title, aspire, aspire_text, role, scores, floor_detail, created_at, waiver_id, email_results";
 
 export async function GET(req: Request) {
   if (!(await isCoach())) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
@@ -23,15 +23,20 @@ export async function POST(req: Request) {
   if (!(age >= 18 && age <= 105)) return NextResponse.json({ error: "Age must be 18 to 105." }, { status: 400 });
   if (b.sex !== "F" && b.sex !== "M") return NextResponse.json({ error: "Pick female or male." }, { status: 400 });
   if (b.giveaway && !emailOk(b.email)) return NextResponse.json({ error: "The giveaway needs a valid email." }, { status: 400 });
+  // No waiver, no test: every visitor starts from a signed waiver that isn't linked to anyone yet.
+  if (typeof b.waiver_id !== "string") return NextResponse.json({ error: "The participant needs to sign the waiver first." }, { status: 400 });
+  const { data: w } = await db().from("waivers").select("id, visitor_id, agreed, consent_leaderboard, consent_email, email").eq("id", b.waiver_id).single();
+  if (!w || !w.agreed || w.visitor_id) return NextResponse.json({ error: "That waiver can't be used. Have the participant sign again." }, { status: 400 });
+  const giveEmail = b.giveaway && emailOk(b.email) ? b.email.trim().toLowerCase() : null, email = giveEmail || w.email || null;
   const row = {
-    code: newCode(), name: b.name.trim().replace(/\s+/g, " ").slice(0, 60), age, sex: b.sex, opt_in: b.opt_in !== false, giveaway: !!b.giveaway,
-    email: emailOk(b.email) ? b.email.trim().toLowerCase() : null, email_source: emailOk(b.email) ? "giveaway" : null,
+    code: newCode(), name: b.name.trim().replace(/\s+/g, " ").slice(0, 60), age, sex: b.sex, opt_in: !!w.consent_leaderboard, giveaway: !!b.giveaway,
+    email, email_source: giveEmail ? "giveaway" : email ? "waiver" : null, waiver_id: w.id, email_results: !!w.consent_email,
     aspire: typeof b.aspire === "string" ? b.aspire.split(",").filter((k: string) => /^[a-z]+$/.test(k)).slice(0, 3).join(",") || null : null, aspire_text: typeof b.aspire_text === "string" ? b.aspire_text.slice(0, 120) : null,
     role: typeof b.role === "string" ? b.role.slice(0, 30) : null,
   };
   for (let i = 0; i < 3; i++) {
     const { data, error } = await db().from("visitors").insert(row).select(COLS).single();
-    if (!error) return NextResponse.json({ visitor: data });
+    if (!error) { await db().from("waivers").update({ visitor_id: data.id }).eq("id", w.id); return NextResponse.json({ visitor: data }); }
     if (!error.message.includes("duplicate")) return NextResponse.json({ error: error.message }, { status: 500 });
     row.code = newCode();
   }
