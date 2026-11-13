@@ -53,8 +53,10 @@ create table if not exists public.waivers (
   consent_leaderboard boolean not null default false,
   consent_media boolean not null default false,
   consent_email boolean not null default false,
+  consent_giveaway boolean not null default false,
   email text
 );
 alter table public.waivers enable row level security;
 alter table public.visitors add column if not exists waiver_id uuid references public.waivers(id);
 alter table public.visitors add column if not exists email_results boolean not null default false;
+alter table public.waivers add column if not exists consent_giveaway boolean not null default false;

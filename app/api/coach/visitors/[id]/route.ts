@@ -9,24 +9,24 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const b = await req.json().catch(() => null);
   if (!b) return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
   const patch: Record<string, unknown> = {};
-  if (b.scores || "floor_detail" in b) {
-    const { data: cur, error: e0 } = await db().from("visitors").select("waiver_id").eq("id", id).single();
-    if (e0 || !cur?.waiver_id) return NextResponse.json({ error: "No signed waiver for this visitor. Scores weren't saved." }, { status: 403 });
-  }
+
   if (b.scores && typeof b.scores === "object") {
     const s: Record<string, number> = {};
     for (const t of ORDER) { const v = b.scores[t]; if (typeof v === "number" && isFinite(v)) s[t] = clampScore(t as TestId, v); }
     patch.scores = s;
   }
   if ("floor_detail" in b) patch.floor_detail = b.floor_detail ?? null;
+  if (typeof b.opt_in === "boolean") patch.opt_in = b.opt_in;
+  if (typeof b.giveaway === "boolean") patch.giveaway = b.giveaway;
+  if (typeof b.email_results === "boolean") patch.email_results = b.email_results;
   if (b.email !== undefined) {
     if (!emailOk(b.email)) return NextResponse.json({ error: "That email doesn't look right." }, { status: 400 });
-    patch.email = b.email.trim().toLowerCase(); patch.email_source = "coach"; patch.email_results = true;
+    patch.email = b.email.trim().toLowerCase(); patch.email_source = "coach";
   }
   const sel = async (cols: string) => db().from("visitors").update(patch).eq("id", id).select(cols).single<{ id: string; code: string; name: string; age: number; sex: string; scores: Record<string, number>; email: string | null; emailed_at?: string | null }>();
   let { data, error } = await sel("id, code, name, age, sex, scores, email, emailed_at");
-  if (error && /emailed_at/.test(error.message)) ({ data, error } = await sel("id, code, name, age, sex, scores, email"));
+  if (error && /emailed_at|email_results/.test(error.message)) { delete patch.email_results; ({ data, error } = await sel("id, code, name, age, sex, scores, email")); }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (data && patch.email && data.email) await sendReportEmail({ ...data, email: data.email });
+  if (data && patch.email && data.email && b.send_results !== false) await sendReportEmail({ ...data, email: data.email });
   return NextResponse.json({ visitor: data });
 }
