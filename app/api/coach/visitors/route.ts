@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const w = typeof b.waiver_id === "string" ? (await db().from("waivers").select("id, visitor_id, consent_leaderboard, consent_email, email").eq("id", b.waiver_id).single()).data : null;
   const giveEmail = b.giveaway && emailOk(b.email) ? b.email.trim().toLowerCase() : null, email = giveEmail || w?.email || null;
   const row = {
-    code: newCode(), name: b.name.trim().replace(/\s+/g, " ").slice(0, 60), age, sex: b.sex, opt_in: b.opt_in !== false, giveaway: !!b.giveaway,
+    code: newCode(), name: b.name.trim().replace(/\s+/g, " ").slice(0, 60), age, sex: b.sex, opt_in: !!w?.consent_leaderboard, // public display only with the participant's own consent on the waiver giveaway: !!b.giveaway,
     email, email_source: giveEmail ? "giveaway" : email ? "waiver" : null,
     aspire: typeof b.aspire === "string" ? b.aspire.split(",").filter((k: string) => /^[a-z]+$/.test(k)).slice(0, 3).join(",") || null : null, aspire_text: typeof b.aspire_text === "string" ? b.aspire_text.slice(0, 120) : null,
     role: typeof b.role === "string" ? b.role.slice(0, 30) : null,

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ORDER, TESTS, TIER, tierFor, ladderPos, fmt, movementAge, pointsOf, tierOf, unitOf, valueAt, type Scores, type Sex, type TestId, type Tier } from "@/lib/norms";
+import { ORDER, TESTS, TIER, SOURCES, balanceLabel, tierFor, ladderPos, fmt, movementAge, pointsOf, tierOf, unitOf, valueAt, type Scores, type Sex, type TestId, type Tier } from "@/lib/norms";
 import { ASPIRE, CLIN, HABITS, NOUN, WHAT, PARTNER_EMAIL } from "@/lib/copy";
 import { Logo } from "@/app/ui";
 
@@ -24,7 +24,7 @@ const Idea = () => (
 );
 const ICON: Record<TestId, string> = {
   balance: "M12 2.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM12 7v7m0 0-2 7m2-7 3 2M6 10h12",
-  wallsit: "M9 2.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM9 7v6h6v7M4 3v18",
+  squat: "M9 2.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM9 7v6h6v7M4 3v18",
   grip: "M6 8h12l-1 12H7zM9 8V6a3 3 0 0 1 6 0v2",
   pushups: "M18 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM3 15l12-4 2 6M15 11v6M2 20h20",
   floor: "M8 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM8 11v4l5 2v3M8 15l-3 5M2 21h20",
@@ -75,12 +75,12 @@ export default function Report({ code }: { code: string }) {
   const avgAll = Math.round(done.reduce((a, t) => a + pts[t], 0) / done.length);
   const headline = done.length > 1 && pts[best] - pts[low] >= 15 ? `Your ${NOUN[best]} is ahead of your age. ${cap(NOUN[low])} is where to focus.`
     : avgAll >= 65 ? `You're ahead of most ${who} your age across the board.` : avgAll >= 40 ? "You're right around typical for your age, with clear room to build." : "You have real room to build, and these measures respond quickly.";
+  const eo = !!d.scores.balance_eo, tName = (t: TestId) => (t === "balance" ? `One-leg balance, ${balanceLabel(d.scores!)}` : TESTS[t].name);
   const mAge = movementAge(p), showAge = d.age >= 45 && done.length >= 3, diff = d.age - mAge;
 
   const notes: string[] = [];
   if (d.scores.grip != null) { const c = d.sex === "F" ? 16 : 27, g = d.scores.grip; notes.push(g >= c + 6 ? `Your grip is well clear of the <b>${c} kg</b> low-strength line clinicians use. Grip is one of the most predictive single measures of healthy aging.` : g >= c ? `Your grip is just above the <b>${c} kg</b> low-strength line. Worth building a buffer, since grip declines steadily after 50.` : `Your grip is below the <b>${c} kg</b> low-strength line clinicians use. Worth raising with your doctor, and it responds well to training.`); }
-  if (d.scores.floor != null) notes.push(d.scores.floor >= 8 ? `A floor rise of <b>${fmt("floor", d.scores.floor)}</b> puts you in the lowest-risk band (8 to 10) in the research on this test.` : `A floor rise of <b>${fmt("floor", d.scores.floor)}</b>. Getting to 8 or above is the goal: that band carries the lowest risk in the research on this test.`);
-  if (d.scores.balance != null && pts.balance < 50) notes.push("Eyes-closed balance falls fastest of anything we tested, and it's also the quickest to come back with daily practice.");
+  if (d.scores.balance != null && pts.balance < 50) notes.push(`${d.scores.balance_eo ? "Balance" : "Eyes-closed balance"} falls fastest of anything we tested, and it's also the quickest to come back with daily practice.`);
 
   const gKeys = (d.aspire || "").split(",").filter(Boolean), presets = gKeys.filter((k) => ASPIRE[k]);
   const goals: { label: string; takes?: string }[] = [...presets.map((k) => ({ label: ASPIRE[k].label, takes: ASPIRE[k].takes })), ...(gKeys.includes("other") && d.aspire_text ? [{ label: d.aspire_text }] : [])];
@@ -99,10 +99,10 @@ export default function Report({ code }: { code: string }) {
 
       <section className="sec"><div className="sec-head"><span className="ov">How you compare</span><h2>Test by test, against {who} your age.</h2></div>
         <div className="cmp-list">{done.map((t) => { const pc = pts[t], tr = tierFor(t, p)!, ti = TIERS.indexOf(tr); return (
-          <div className="cmp-card" key={t}><div className="cmp-top"><h3>{TESTS[t].name}</h3><span className="res">{fmt(t, d.scores![t])}<small>{unitOf(t)}</small></span></div>
-            <div className="ladder" role="img" aria-label={`${TIER[tr]}${t === "floor" ? "" : ` for your age, ${pc}th percentile`}`}>{TIERS.map((x, i) => <span key={x} className={`seg ${i <= ti ? "on" : ""} ${i <= ti && tr === "elite" ? "elite" : ""}`} />)}<span className="mk" style={{ left: `${ladderPos(t, p)}%` }} /></div>
+          <div className="cmp-card" key={t}><div className="cmp-top"><h3>{tName(t)}</h3><span className="res">{fmt(t, d.scores![t])}<small>{unitOf(t)}</small></span></div>
+            <div className="ladder" role="img" aria-label={`${TIER[tr]}${t === "floor" ? " risk band" : ` for your age, ${pc}th percentile`}`}>{TIERS.map((x, i) => <span key={x} className={`seg ${i <= ti ? "on" : ""} ${i <= ti && tr === "elite" ? "elite" : ""}`} />)}<span className="mk" style={{ left: `${ladderPos(t, p)}%` }} /></div>
             <div className="ladder-l">{TIERS.map((x) => <span key={x} className={x === tr ? "on" : ""}>{TIER[x]}</span>)}</div>
-            <p className="cmp-say">{t === "floor" ? (d.scores![t]! >= 8 ? <>In the <b>lowest-risk band</b> (8 to 10) in the research on this test.</> : <>The research&rsquo;s lowest-risk band starts at <b>8</b>. Each point counts.</>) : pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50))}{u(t)}</b>.</>}</p></div>); })}</div>
+            <p className="cmp-say">{t === "floor" ? <>{d.scores![t]! >= 8 ? <>In the <b>lowest-risk band</b> (8 to 10) in the research on this test.</> : <>The research&rsquo;s lowest-risk band starts at <b>8</b>. Each point counts.</>} {pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50))}</b>.</>}</> : pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50, eo))}{u(t)}</b>.</>}</p></div>); })}</div>
         {notes.length > 0 && <div className="notes">{notes.map((n, i) => <div className="note" key={i}><span style={{ color: "var(--ink)" }}><Idea /></span><p dangerouslySetInnerHTML={{ __html: n }} /></div>)}</div>}
       </section>
       <WaveLine />
@@ -112,7 +112,7 @@ export default function Report({ code }: { code: string }) {
             ? <><span className="q">{goals[0] ? cap(goals[0].label) : "Stay strong and independent"} at 85.</span><span className="takes">{goals[0]?.takes ?? "We looked at the two measures with the most room to grow."}</span></>
             : <><span className="gl-k">At 85, you want to</span><ul className="gl">{goals.map((g) => <li key={g.label}><b>{cap(g.label)}</b>{g.takes ? <span>{g.takes}</span> : null}</li>)}</ul></>}</div>
           <div className="proj head"><span>What it takes</span><span>You today</span><span>At 85, aging like most</span></div>
-          {gTests.map((t) => <div className="proj" key={t}><span className="t">{TESTS[t].short}<span>{WHAT[t]}</span></span><span className="v now num">{fmt(t, d.scores![t])}{u(t)}</span><span className="v fut num">{fmt(t, valueAt(t, 85, d.sex, pts[t]))}{u(t)}</span></div>)}
+          {gTests.map((t) => <div className="proj" key={t}><span className="t">{TESTS[t].short}<span>{WHAT[t]}</span></span><span className="v now num">{fmt(t, d.scores![t])}{u(t)}</span><span className="v fut num">{fmt(t, valueAt(t, 85, d.sex, pts[t], eo))}{u(t)}</span></div>)}
           <div className="goal-f">Most people lose strength and balance every decade after 50. That isn&rsquo;t fixed: the habits below are chosen to bend that line for your {listJoin(gTests.map((t) => NOUN[t]))}.</div></div></section>
       <WaveLine />
 
@@ -127,10 +127,10 @@ export default function Report({ code }: { code: string }) {
       {d.standing && <Standing st={d.standing} />}
       <section className="sec"><div className="sec-head"><span className="ov">The detail</span><h2>Your numbers and the research behind them.</h2></div>
         <div className="det">{done.map((t) => (
-          <details key={t}><summary><span className="nm">{TESTS[t].name}</span><span className="rv num">{fmt(t, d.scores![t])}{u(t)}</span><span className="chev" aria-hidden="true">›</span></summary>
-            <div className="body"><div className="refs"><div><span>You</span><b>{fmt(t, d.scores![t])}{u(t)}</b></div>{t === "floor" ? <><div><span>Lowest risk</span><b>8 to 10</b></div><div><span>Highest risk</span><b>0 to 3</b></div></> : <><div><span>Typical</span><b>{fmt(t, valueAt(t, d.age, d.sex, 50))}{u(t)}</b></div><div><span>Top 10%</span><b>{fmt(t, valueAt(t, d.age, d.sex, 90))}{u(t)}</b></div></>}</div>
-              <p className="clin">{CLIN[t](d.sex)}</p></div></details>))}</div>
-        <p className="fine2">Typical is the median and top 10% the 90th percentile for {who} your age in published norms. Balance, floor rise and wall sit norms are approximate.</p></section>
+          <details key={t}><summary><span className="nm">{tName(t)}</span><span className="rv num">{fmt(t, d.scores![t])}{u(t)}</span><span className="chev" aria-hidden="true">›</span></summary>
+            <div className="body"><div className="refs"><div><span>You</span><b>{fmt(t, d.scores![t])}{u(t)}</b></div>{t === "floor" ? <><div><span>Typical, your age</span><b>{fmt(t, valueAt(t, d.age, d.sex, 50))}</b></div><div><span>Lowest risk</span><b>8 to 10</b></div></> : <><div><span>Typical</span><b>{fmt(t, valueAt(t, d.age, d.sex, 50, eo))}{u(t)}</b></div><div><span>Top 10%</span><b>{fmt(t, valueAt(t, d.age, d.sex, 90, eo))}{u(t)}</b></div></>}</div>
+              <p className="clin">{CLIN[t](d.sex, d.scores!)}</p><p className="src"><b>Source.</b> {SOURCES[t].cite}. {SOURCES[t].note}</p></div></details>))}</div>
+        <p className="fine2">Typical is the median and top 10% the 90th percentile for {who} your age. The squat hold has no published norms, so it uses a Groove estimate. Floor rise tiers follow the research risk bands, and its age comparison is modeled from published findings.</p></section>
 
       <section className="gv"><PanelLines /><span className="ov">About Groove</span><h2>The care that comes after the diagnosis.</h2>
         <p>Groove gives older adults with osteoporosis, osteopenia, sarcopenia and arthritis a dedicated physical therapist and physician, at home. Members get a plan built from measures like the ones you just did, and their PT adjusts it as they progress.</p>

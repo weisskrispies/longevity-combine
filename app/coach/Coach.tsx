@@ -1,14 +1,14 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { ORDER, TESTS, TIER, displayName, tierFor, fmt, isFull, percentile, tierOf, unitOf, combine, clampScore, type Scores, type Sex, type TestId } from "@/lib/norms";
+import { ORDER, TESTS, TIER, CLUB_SEC, LOW_GRIP, displayName, tierFor, fmt, isFull, percentile, tierOf, unitOf, combine, clampScore, valueAt, type Scores, type Sex, type TestId } from "@/lib/norms";
 import { ASPIRE, ROLES } from "@/lib/copy";
 import { Logo, Waves, useToast } from "@/app/ui";
 import { WAIVER } from "@/lib/waiver";
 
 type Floor = { dn: number; dw: number; un: number; uw: number };
 type Visitor = { id: string; code: string; name: string; age: number; sex: Sex; opt_in: boolean; giveaway: boolean; email: string | null; aspire: string | null; aspire_text: string | null; role: string | null; scores: Scores; floor_detail: Floor | null; waiver_id?: string | null; email_results?: boolean };
-type Signed = { id: string; signed_name: string; consent_leaderboard: boolean; consent_media: boolean; consent_email: boolean; consent_giveaway?: boolean; email: string | null };
+type Signed = { id: string; signed_name: string; consent_leaderboard: boolean; consent_media?: boolean; consent_email: boolean; consent_giveaway?: boolean; email: string | null };
 type Mode = "home" | "visitor" | "scores" | "results" | "playbook";
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const SITE = typeof window !== "undefined" ? window.location.origin : "https://combine.groovehealth.com";
@@ -29,6 +29,7 @@ export default function Coach() {
   const [pending, setPending] = useState(0);
   const [toast, show] = useToast();
   const [wv, setWv] = useState(false);
+  const [pre, setPre] = useState<Pre | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [loadErr, setLoadErr] = useState("");
@@ -80,7 +81,7 @@ export default function Coach() {
   );
 
   const open = (v: Visitor) => { setCur(v); setMode("results"); };
-  const close = () => { setMode("home"); setCur(null); refresh(); };
+  const close = () => { setMode("home"); setCur(null); setPre(null); refresh(); };
 
   return (
     <>
@@ -90,16 +91,11 @@ export default function Coach() {
         {errBox}
         <div className="c-home">
           <div className="c-top">
-            <section className="c-hero"><Waves />
-              <span className="ov">Groove Combine</span>
-              <h1>Next participant</h1>
-              <p>Name, age and sex, then scores as they finish each test.</p>
-              <button className="btn gold" onClick={() => setMode("visitor")}>New participant</button>
-            </section>
+            <QuickGrip onJoin={(p) => { setPre(p); setMode("visitor"); }} />
             <section className="c-tips">
               <span className="eyebrow">On the floor</span>
               <ul>
-                <li><b>Open with grip.</b> &ldquo;Want to see how your grip stacks up for your age?&rdquo;</li>
+                <li><b>Open with grip.</b> Anyone walking by, no waiver. Then balance, then push-ups if they&rsquo;re into it.</li>
                 <li><b>Pivot after the score.</b> &ldquo;These are the measures our PTs track with Medicare members. Who do you work with?&rdquo;</li>
                 <li><b>Safety first.</b> Ask about injuries or dizziness. Spot every balance and floor test.</li>
               </ul>
@@ -121,7 +117,10 @@ export default function Coach() {
       {mode !== "home" && (
         <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="s-title">
           {mode === "playbook" && <Playbook onClose={() => setMode("home")} />}
-          {mode === "visitor" && <VisitorStep onClose={close} onCreated={(v) => { setCur(v); setMode("scores"); }} show={show} />}
+          {mode === "visitor" && <VisitorStep pre={pre} onClose={close} show={show} onCreated={(v) => {
+            const v2 = pre?.grip != null ? { ...v, scores: { ...v.scores, grip: pre.grip } } : v;
+            setCur(v2); if (v2 !== v) queuePatch(v2, { scores: v2.scores }); setPre(null); setMode("scores");
+          }} />}
           {mode === "scores" && cur && <ScoresStep v={cur} onSign={() => setWv(true)} onScores={updateScores} onClose={() => { show("Saved. Search their name to pick up where you left off."); close(); }} onNext={() => setMode("results")} />}
           {mode === "results" && cur && <ResultsStep v={cur} onEdit={() => setMode("scores")} onClose={close} onEmail={(email, quiet) => { const v = { ...cur, email }; setCur(v); queuePatch(v, { email }); if (!quiet) show(`Saved. ${cur.name.split(" ")[0]}'s results are on their way to ${email}.`); }}
             onOptIn={(o) => { const v = { ...cur, ...o, email: o.email || cur.email }; setCur(v); queuePatch(v, o); show("Saved."); }} />}
@@ -144,14 +143,14 @@ function Steps({ at, onClose }: { at: number; onClose: () => void }) {
 }
 
 function WaiverModal({ forName, visitorId, onClose, onSigned, show }: { forName?: string; visitorId?: string; onClose: () => void; onSigned: (w: Signed) => void; show: (m: string) => void }) {
-  const [agreed, setAgreed] = useState(false), [name, setName] = useState(""), [give, setGive] = useState(false), [mail, setMail] = useState(false), [email, setEmail] = useState("");
-  const needEmail = give || mail;
+  const [agreed, setAgreed] = useState(false), [name, setName] = useState(""), [lb, setLb] = useState(false), [give, setGive] = useState(false), [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
-  const full = name.trim().split(/\s+/).length >= 2, ok = agreed && full && (!needEmail || emailOk(email.trim()));
+  const em = email.trim(), emailValid = !em || emailOk(em);
+  const full = name.trim().split(/\s+/).length >= 2, ok = agreed && full && emailValid && (!give || !!em);
   const submit = async () => {
     if (!ok || busy) return; setBusy(true);
     try {
-      const r = await fetch("/api/coach/waivers", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: WAIVER.version, agreed, name, consent_email: mail, consent_giveaway: give, email: needEmail ? email.trim() : null, visitor_id: visitorId }) });
+      const r = await fetch("/api/coach/waivers", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: WAIVER.version, agreed, name, email: em || null, consent_email: !!em, consent_leaderboard: lb, consent_giveaway: give, visitor_id: visitorId }) });
       const j = await r.json().catch(() => ({}));
       if (j.reload) { show(j.error); setTimeout(() => location.reload(), 1200); return; }
       if (!r.ok) throw new Error(j.error); onSigned(j.waiver);
@@ -165,15 +164,14 @@ function WaiverModal({ forName, visitorId, onClose, onSigned, show }: { forName?
       <div className="wv-head"><div className="wv-brand"><Logo tone="cream" /><span>Longevity Combine</span></div><h2 id="wv-title">Release and waiver</h2></div>
       <button className="wv-x" onClick={onClose} aria-label="Close waiver">×</button>
       <div className="wv-body">
-        <div className="wv-text" tabIndex={0} role="document" aria-label="Release and waiver text">{WAIVER.text.split(/\n\n+/).map((para, i) => <p key={i}>{para}</p>)}</div>
+        <div className="wv-text" tabIndex={0} role="document" aria-label="Release and waiver text">{WAIVER.text.split(/\n\n+/).map((para, i) => { const m = i > 1 ? para.match(/^([A-Z][A-Za-z ]{2,40}(?:\.|:)) ([\s\S]*)$/) : null; return <p key={i}>{m ? <><b>{m[1]}</b> {m[2]}</> : para}</p>; })}</div>
         <div className="wv-form">
           <div className="field"><label htmlFor="wv-name">Type your full name</label><input className="input wv-name" id="wv-name" autoComplete="off" autoCapitalize="words" autoCorrect="off" spellCheck={false} enterKeyHint="done" placeholder={forName?.includes(" ") ? forName : "First and last name"} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="field"><label htmlFor="wv-email">Email <span className="wv-sub">for your results</span></label><input className="input wv-email" id="wv-email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={!emailValid} /></div>
           {box("wv-agree", agreed, setAgreed, <b>I have read and agree to the release</b>, true)}
-          <p className="wv-opt">Optional, needs your email</p>
-          {box("wv-give", give, setGive, "Opt in to win a speaker")}
-          {box("wv-mail", mail, setMail, "Opt in to get my results")}
-          {needEmail && <input className="input wv-email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" aria-label="Your email" placeholder="Your email" value={email} onChange={(e) => setEmail(e.target.value)} />}
-
+          <p className="wv-opt">Optional</p>
+          {box("wv-lb", lb, setLb, "Show my first name and scores on the booth leaderboard")}
+          {box("wv-give", give, setGive, <>Enter to win a speaker{give && !em ? <span className="wv-need"> Add your email above.</span> : null}</>)}
         </div>
       </div>
       <div className="s-foot wv-foot"><button className="wv-skip" onClick={onClose}>Skip for now</button><button className="btn gold wv-go" disabled={!ok || busy} onClick={submit}>{busy ? "Saving…" : "Sign"}</button></div>
@@ -181,9 +179,35 @@ function WaiverModal({ forName, visitorId, onClose, onSigned, show }: { forName?
   );
 }
 
-function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCreated: (v: Visitor) => void; show: (m: string) => void }) {
+type Pre = { age?: number; sex?: Sex; grip?: number };
+
+function QuickGrip({ onJoin }: { onJoin: (p: Pre) => void }) {
+  const [age, setAge] = useState(""), [sex, setSex] = useState<Sex | "">(""), [kg, setKg] = useState("");
+  const a = Number(age), g = Number(kg.replace(",", ".")), ready = a >= 18 && a <= 105 && !!sex && kg.trim() !== "" && g > 0 && g <= 90;
+  const pc = ready ? percentile("grip", a, sex as Sex, g)! : 0, tr = ready ? tierOf(pc) : null, who = sex === "F" ? "women" : "men";
+  const low = ready && g < LOW_GRIP[sex as Sex];
+  const reset = () => { setAge(""); setSex(""); setKg(""); };
+  return (
+    <section className="c-hero qg"><Waves />
+      <div className="qg-head"><span className="ov">Quick grip</span><h1>Anyone walking by</h1><p>Dominant hand, best of 3. Nothing is saved.</p></div>
+      <div className="qg-in">
+        <div className="field"><label htmlFor="qg-age">Age</label><input className="input num" id="qg-age" inputMode="numeric" autoComplete="off" placeholder="–" value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 3))} /></div>
+        <div className="field"><span className="lab">Sex</span><div className="seg qg-sex" role="group" aria-label="Sex">{(["F", "M"] as Sex[]).map((x) => <button key={x} type="button" aria-pressed={sex === x} onClick={() => setSex(x)}>{x === "F" ? "Female" : "Male"}</button>)}</div></div>
+        <div className="field"><label htmlFor="qg-kg">Grip</label><div className="unit-in"><input className="input num" id="qg-kg" inputMode="decimal" autoComplete="off" placeholder="–" value={kg} onChange={(e) => setKg(e.target.value.slice(0, 5))} /><span>kg</span></div></div>
+      </div>
+      {ready && tr && <div className="qg-out" aria-live="polite"><span className={`pill ${tr}`}>{TIER[tr]}</span>
+        <p>{pc >= 50 ? <>Stronger than <b>{pc}%</b> of {who} their age.</> : <>Typical for {who} their age is <b>{fmt("grip", valueAt("grip", a, sex as Sex, 50))} kg</b>.</>}{low ? <> Below the {LOW_GRIP[sex as Sex]} kg low-strength line.</> : null}</p></div>}
+      <div className="qg-act">
+        <button className="btn gold" onClick={() => { onJoin(ready ? { age: a, sex: sex as Sex, grip: clampScore("grip", g) } : {}); reset(); }}>{ready ? "Join the Combine ›" : "New participant"}</button>
+        {(age || sex || kg) && <button type="button" className="qg-reset" onClick={reset}>Next person</button>}
+      </div>
+    </section>
+  );
+}
+
+function VisitorStep({ pre, onClose, onCreated, show }: { pre: Pre | null; onClose: () => void; onCreated: (v: Visitor) => void; show: (m: string) => void }) {
   const [waiver, setWaiver] = useState<Signed | null>(null), [wOpen, setWOpen] = useState(true);
-  const [d, setD] = useState({ first: "", last: "", age: "", sex: "", opt_in: true, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
+  const [d, setD] = useState({ first: "", last: "", age: pre?.age ? String(pre.age) : "", sex: pre?.sex || "", opt_in: false, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: unknown) => setD((x) => ({ ...x, [k]: v }));
   const age = Number(d.age), ok = d.first.trim() && age >= 18 && age <= 105 && d.sex && (!d.giveaway || emailOk(d.email));
@@ -215,7 +239,6 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
               <div className="field"><span className="lab">Sex</span><div className="chips seg">{chip("sex", "F", "Female")}{chip("sex", "M", "Male")}</div></div>
             </div>
             <div>
-              <label className="switch" htmlFor="f-opt"><span><b>Show on the leaderboard</b><span>As {d.first.trim() ? displayName(`${d.first} ${d.last}`) : "first name and last initial"}</span></span><input type="checkbox" id="f-opt" checked={d.opt_in} onChange={(e) => set("opt_in", e.target.checked)} /></label>
               <label className="switch" htmlFor="f-give"><span><b>Enter the speaker giveaway</b><span>Top Combine Score in each age group wins. Needs an email.</span></span><input type="checkbox" id="f-give" checked={d.giveaway} onChange={(e) => set("giveaway", e.target.checked)} /></label>
               {d.giveaway && <div className="field"><label htmlFor="f-email">Email</label><input className="input" id="f-email" type="email" inputMode="email" autoComplete="off" placeholder="name@company.com" value={d.email} onChange={(e) => set("email", e.target.value)} /></div>}
             </div>
@@ -234,7 +257,7 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
       <div className="s-foot"><button className="btn secondary" onClick={onClose}>Cancel</button><button className="btn" disabled={!ok || busy} onClick={submit}>{busy ? "Saving…" : "Start testing"}</button></div>
       {wOpen && <WaiverModal forName={`${d.first} ${d.last}`.trim()} onClose={() => setWOpen(false)} show={show} onSigned={(w) => {
         setWaiver(w); setWOpen(false);
-        setD((x) => ({ ...x, giveaway: !!w.consent_giveaway, ...(!x.first.trim() ? { first: w.signed_name.split(" ")[0], last: w.signed_name.split(" ").slice(1).join(" ") } : {}), ...(w.email && !x.email ? { email: w.email } : {}) }));
+        setD((x) => ({ ...x, opt_in: w.consent_leaderboard, giveaway: !!w.consent_giveaway, ...(!x.first.trim() ? { first: w.signed_name.split(" ")[0], last: w.signed_name.split(" ").slice(1).join(" ") } : {}), ...(w.email && !x.email ? { email: w.email } : {}) }));
         show("Signed. Thanks! Please hand the iPad back.");
       }} />}
     </div>
@@ -244,7 +267,7 @@ function VisitorStep({ onClose, onCreated, show }: { onClose: () => void; onCrea
 function Echo({ t, v }: { t: TestId; v: Visitor }) {
   const val = v.scores[t]; if (val == null) return null;
   const tr = tierFor(t, v)!;
-  return <>{t === "wallsit" ? `${fmt(t, val)}${val >= 120 ? " · 2:00 Club" : ""}` : null}<span className={`pill ${tr}`}>{TIER[tr]}</span></>;
+  return <>{t === "squat" ? `${fmt(t, val)}${val >= CLUB_SEC ? " · 1:00 Club" : ""}` : null}<span className={`pill ${tr}`}>{TIER[tr]}</span></>;
 }
 
 function ScoresStep({ v, onSign, onScores, onClose, onNext }: { v: Visitor; onSign: () => void; onScores: (s: Scores, f?: Floor | null) => void; onClose: () => void; onNext: () => void }) {
@@ -264,7 +287,8 @@ function ScoresStep({ v, onSign, onScores, onClose, onNext }: { v: Visitor; onSi
     scores.floor = Math.max(0, 10 - f.dn - f.un - 0.5 * (f.dw + f.uw)); onScores(scores, f);
   };
   const ctl = (k: keyof Floor, l: string) => <div className="fctl"><span>{l}</span><div className="step"><button type="button" onClick={() => tap(k, -1)} aria-label={`One fewer: ${l}`}>−</button><b className="num">{fl[k]}</b><button type="button" onClick={() => tap(k, 1)} aria-label={`One more: ${l}`}>+</button></div></div>;
-  const nums: TestId[] = ["grip", "balance", "wallsit", "pushups"];
+  const nums: TestId[] = ["grip", "balance", "pushups", "squat"];
+  const setEyes = (open: boolean) => { const scores = { ...v.scores }; if (open) scores.balance_eo = 1; else delete scores.balance_eo; onScores(scores); };
   const locked = v.waiver_id === null; // null = not signed; undefined = waiver SQL not run yet, so don't lock
   return (
     <div className="sheet-in"><Steps at={1} onClose={onClose} />
@@ -273,7 +297,8 @@ function ScoresStep({ v, onSign, onScores, onClose, onNext }: { v: Visitor; onSi
         {locked && <button type="button" className="wv-cta" onClick={onSign}><span><b>Grip is open. The other four need a waiver.</b><span>Hand them the iPad to read and sign.</span></span><span className="go">Sign waiver ›</span></button>}
         <div className="entries">
           {nums.map((t, i) => (
-            <div className={`entry ${locked && t !== "grip" ? "locked" : ""}`} key={t}><div className="l"><label htmlFor={`in-${t}`}>{TESTS[t].name}</label><span className="hint">{TESTS[t].hint}</span></div>
+            <div className={`entry ${locked && t !== "grip" ? "locked" : ""}`} key={t}><div className="l"><label htmlFor={`in-${t}`}>{TESTS[t].name}</label><span className="hint">{TESTS[t].hint}</span>
+                {t === "balance" && <div className="seg eyes" role="group" aria-label="Eyes">{[false, true].map((o) => <button key={String(o)} type="button" aria-pressed={!!v.scores.balance_eo === o} disabled={locked} onClick={() => setEyes(o)}>{o ? "Eyes open" : "Eyes closed"}</button>)}</div>}</div>
               <div className="r"><div className="unit-in"><input ref={(el) => { refs.current[i] = el; }} className="input num" id={`in-${t}`} inputMode={TESTS[t].mode} enterKeyHint="next" autoComplete="off" placeholder="–" autoFocus={i === 0} disabled={locked && t !== "grip"}
                 value={raw[t]} onChange={(e) => setNum(t, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const n = refs.current[i + 1]; if (n) n.focus(); else e.currentTarget.blur(); } }} /><span>{TESTS[t].unit}</span></div>
                 <span className="echo"><Echo t={t} v={v} /></span></div></div>
@@ -350,7 +375,7 @@ function Playbook({ onClose }: { onClose: () => void }) {
             <li>Stand at the aisle edge, never behind the counter. Keep one person mid-test; a test in progress draws a crowd.</li>
             <li>&ldquo;Want to see how your grip stacks up for your age?&rdquo; It takes 30 seconds and it&rsquo;s the easiest yes.</li>
             <li>&ldquo;Most people can&rsquo;t stand on one leg for 10 seconds with their eyes closed. Want to try?&rdquo;</li>
-            <li>&ldquo;Two minutes against the wall gets you into the 2:00 Club.&rdquo;</li>
+            <li>&ldquo;Hold a squat for a full minute and you&rsquo;re in the 1:00 Club.&rdquo;</li>
             <li>Point at the board: &ldquo;Your age group has an open spot.&rdquo;</li></ul></section>
           <section className="panel"><h3>Pivot after the score (60 to 90 sec)</h3><ul>
             <li><b>Health plan or medical group:</b> &ldquo;Grip and balance are measures our PTs track for Medicare members with osteoporosis and sarcopenia, billed through RTM. How does your group handle MSK between visits?&rdquo;</li>
@@ -364,14 +389,15 @@ function Playbook({ onClose }: { onClose: () => void }) {
           <section className="panel"><h3>Safety</h3><ul>
             <li>Before any test: &ldquo;Any injuries, recent surgery, or dizziness today?&rdquo;</li>
             <li>Stand beside them for balance and floor rise, within arm&rsquo;s reach.</li>
-            <li>Offer a 10-second eyes-open balance first to anyone hesitant.</li>
+            <li>Anyone hesitant does balance with eyes open. Tap &ldquo;Eyes open&rdquo; so they&rsquo;re compared fairly.</li>
+            <li>Grip is fine for anyone. Everything after grip needs the waiver.</li>
             <li>Anyone who hesitates gets a different test. Never push.</li>
             <li>Say &ldquo;below typical for your age,&rdquo; never &ldquo;you have sarcopenia.&rdquo;</li></ul></section>
           <section className="panel"><h3>Scoring quick reference</h3><ul>
-            <li><b>Grip:</b> best of 2 per hand, enter the stronger hand.</li>
-            <li><b>Balance:</b> arms crossed, eyes closed, best side. Stop at 60 seconds.</li>
-            <li><b>Wall sit:</b> thighs parallel. Stop at 2:00 (2:00 Club).</li>
-            <li><b>Push-ups:</b> 60 seconds. Men full, women from knees. Chest to a fist.</li>
+            <li><b>Grip:</b> dominant hand, best of 3 squeezes. No waiver needed.</li>
+            <li><b>Balance:</b> arms crossed, best of 3. Eyes closed by default; switch to eyes open for anyone unsteady. Stop at 45 seconds.</li>
+            <li><b>Push-ups:</b> as many as they can with good form, no time limit. Men full, women from knees. Chest to a fist.</li>
+            <li><b>Squat hold:</b> thighs parallel, arms forward, no wall. Stop at 60 seconds (1:00 Club).</li>
             <li><b>Floor rise:</b> start at 10. Minus 1 per hand, knee, forearm or side of leg. Minus ½ per wobble.</li></ul></section>
           <section className="panel"><h3>Wrap up</h3><ul>
             <li>Show them their results on the iPad, then the QR code.</li>

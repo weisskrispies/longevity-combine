@@ -1,80 +1,114 @@
 /**
- * Norms and scoring. Single source of truth for coach, report and board.
- * Each test converts a raw result to an estimated percentile (1-99) against
- * people of the same sex and age. See NORMS.md for sources.
- * STATUS: DRAFT pending Nicole/Katie sign-off. Some rows are estimates.
+ * Norms and scoring. Single source of truth for coach, report, board and the printed sheet.
+ * Each test converts a raw result to an estimated percentile (1-99) against people of the
+ * same age (and sex where the research splits by sex). Sources are listed in SOURCES below.
+ * Calibrated Nov 13 to Nicole's benchmark sheet; still pending final clinical sign-off.
  */
 export type Sex = "F" | "M";
-export type TestId = "grip" | "balance" | "wallsit" | "pushups" | "floor";
-export type Scores = Partial<Record<TestId, number>>;
+export type TestId = "grip" | "balance" | "squat" | "pushups" | "floor";
+/** Raw results keyed by test. balance_eo = 1 when balance was done eyes open (default is eyes closed). */
+export type Scores = Partial<Record<TestId, number>> & { balance_eo?: number };
 type Anchors = number[]; // P5, P25, P50, P75, P95
 interface Row { a: number; b: number; F: Anchors; M: Anchors }
+type NormKey = TestId | "balance_eo";
 
-const PCTS = [5, 25, 50, 75, 95];
+const PCTS = [5, 25, 50, 75, 95], Z = [-1.645, -0.674, 0, 0.674, 1.645];
 const r1 = (x: number) => Math.round(x * 10) / 10;
-const row = ([a, b, M, F]: [number, number, Anchors, Anchors]): Row => ({ a, b, M, F });
-// Springer 2007 eyes-closed means; percentiles modeled from the mean (estimate).
-const balRow = (a: number, b: number, f: number, m: number): Row => {
-  const s = (v: number) => [r1(v * 0.15), r1(v * 0.45), r1(v * 0.8), r1(v * 1.4), r1(Math.min(60, v * 3))];
-  return { a, b, F: s(f), M: s(m) };
+const same = (a: number, b: number, an: Anchors): Row => ({ a, b, F: an, M: an });
+
+/** Grip: Nicole's sheet medians (US decade averages, Wang et al. JOSPT 2018), with the spread of the iGRIPS 2025 international percentiles. */
+const GRIP_SPREAD = { M: [0.69, 0.87, 1, 1.12, 1.30], F: [0.68, 0.86, 1, 1.15, 1.37] };
+const gripRow = (a: number, b: number, m: number, f: number): Row => ({ a, b, M: GRIP_SPREAD.M.map((k) => r1(m * k)), F: GRIP_SPREAD.F.map((k) => r1(f * k)) });
+
+/** Balance: Springer et al. 2007, best of 3, stopped at 45 s. Sexes pooled (no significant difference). */
+const BAL_CAP = 45;
+const balAnchors = (mean: number, sd: number): Anchors => {
+  if (mean - 1.645 * sd > 0) return Z.map((z) => r1(Math.min(BAL_CAP, mean + z * sd))); // near-normal, ceiling at 45
+  const s2 = Math.log(1 + (sd * sd) / (mean * mean)), s = Math.sqrt(s2), mu = Math.log(mean) - s2 / 2; // right-skewed: lognormal
+  return Z.map((z) => r1(Math.min(BAL_CAP, Math.exp(mu + z * s))));
 };
-// Groove provisional wall-sit curve (no published norms).
-const wallRow = (a: number, b: number, p: number): Row => {
-  const s = [Math.round(p * 0.25), Math.round(p * 0.6), p, Math.round(Math.min(120, p * 1.5)), Math.round(Math.min(120, p * 2.2))];
-  return { a, b, F: s, M: s };
+const SPRINGER: [number, number, number, number, number, number][] = [ // a, b, eyes open mean, sd, eyes closed mean, sd
+  [0, 39, 44.7, 3.1, 15.2, 13.3], [40, 49, 41.9, 9.9, 12.7, 12.9], [50, 59, 41.2, 10.2, 8.3, 8.4],
+  [60, 69, 32.1, 16.2, 4.4, 5.1], [70, 79, 21.5, 17.3, 3.1, 4.5], [80, 120, 9.4, 12.8, 1.9, 1.0],
+];
+
+/** Push-ups: ACSM categories from Nicole's sheet. "Needs work" at or below nw; "Good" from lo to hi. Untimed, to fatigue. */
+const puAnchors = (nw: number, lo: number, hi: number): Anchors => [Math.max(0, Math.round(nw * 0.4)), nw + 1, Math.round((lo + hi) / 2), Math.round(hi + (hi - lo) / 2 + 1), Math.round(hi * 1.6 + 2)];
+const PUSH: [number, number, [number, number, number], [number, number, number]][] = [ // men [nw, lo, hi], women [nw, lo, hi]
+  [0, 29, [16, 22, 28], [9, 15, 20]], [30, 39, [11, 17, 21], [7, 13, 19]], [40, 49, [9, 13, 16], [4, 11, 14]],
+  [50, 59, [6, 10, 12], [1, 7, 10]], [60, 69, [4, 8, 10], [1, 5, 11]],
+];
+
+/**
+ * Floor rise (sitting-rising test, 0-10). Age curve built to match the published facts:
+ * a 10 is most common in men 16-25 and women 16-40, and under 8% of adults over 55 score 10
+ * (Araujo 2020, 6,141 adults); about 70% of adults 60 and under score 8-10, and over half
+ * of 76-80 year-olds score 0-3 (Brito 2012). Tiers use the mortality risk bands instead.
+ */
+const FLOOR: [number, number, Anchors, Anchors][] = [ // men, women
+  [0, 25, [7, 9, 10, 10, 10], [7, 9, 10, 10, 10]], [26, 40, [6.5, 8.5, 9.5, 10, 10], [7, 9, 10, 10, 10]],
+  [41, 55, [5, 7.5, 8.5, 9.5, 10], [4.5, 7, 8.5, 9.5, 10]], [56, 60, [4, 7, 8, 9, 9.5], [3.5, 6.5, 7.5, 8.5, 9.5]],
+  [61, 70, [2.5, 5, 6.5, 8, 9.5], [2, 4.5, 6, 7.5, 9]], [71, 75, [1, 3.5, 5, 6.5, 8.5], [0.5, 3, 4.5, 6, 8]],
+  [76, 120, [0, 1.5, 3, 5, 7.5], [0, 1, 2.5, 4.5, 7]],
+];
+
+/** Squat hold: no published norms exist. Groove estimate, capped at 60 s. Read as directional. */
+const SQUAT_CAP = 60;
+const squatRow = (a: number, b: number, med: number): Row => same(a, b, [Math.round(med * 0.3), Math.round(med * 0.65), med, Math.min(SQUAT_CAP, Math.round(med * 1.35)), SQUAT_CAP]);
+
+const NORMS: Record<NormKey, Row[]> = {
+  grip: [gripRow(0, 29, 47, 29), gripRow(30, 39, 48, 29), gripRow(40, 49, 45, 28), gripRow(50, 59, 41, 26), gripRow(60, 69, 36, 23), gripRow(70, 79, 31, 19), gripRow(80, 120, 25, 16)],
+  balance: SPRINGER.map(([a, b, , , m, sd]) => same(a, b, balAnchors(m, sd))),
+  balance_eo: SPRINGER.map(([a, b, m, sd]) => same(a, b, balAnchors(m, sd))),
+  pushups: [
+    ...PUSH.map(([a, b, M, F]) => ({ a, b, M: puAnchors(...M), F: puAnchors(...F) })),
+    { a: 70, b: 120, M: [1, 3, 6, 9, 14], F: [0, 2, 5, 9, 14] }, // no validated 70+ norms; extended from the 60s
+  ],
+  floor: FLOOR.map(([a, b, M, F]) => ({ a, b, M, F })),
+  squat: [squatRow(0, 39, 40), squatRow(40, 49, 35), squatRow(50, 59, 30), squatRow(60, 69, 22), squatRow(70, 79, 15), squatRow(80, 120, 10)],
 };
 
-const NORMS: Record<TestId, Row[]> = {
-  // iGRIPS international norms 2025, best hand, kg
-  grip: ([
-    [0, 24, [33.9, 41.9, 48.0, 54.5, 63.6], [19.7, 24.9, 28.6, 32.6, 39.1]], [25, 29, [35.5, 43.5, 49.3, 55.3, 64.0], [20.0, 25.4, 29.4, 33.6, 39.7]],
-    [30, 34, [35.0, 43.6, 49.7, 55.9, 64.9], [19.6, 25.4, 29.7, 34.2, 40.4]], [35, 39, [33.8, 43.0, 49.5, 56.0, 65.3], [19.0, 25.1, 29.7, 34.3, 40.8]],
-    [40, 44, [32.3, 42.0, 48.8, 55.5, 65.1], [18.3, 24.8, 29.4, 34.1, 40.8]], [45, 49, [30.6, 40.6, 47.6, 54.5, 64.4], [17.6, 24.1, 28.9, 33.6, 40.4]],
-    [50, 54, [28.9, 39.0, 46.2, 53.2, 63.1], [16.9, 23.4, 28.2, 32.9, 39.7]], [55, 59, [27.2, 37.2, 44.4, 51.5, 61.4], [16.1, 22.6, 27.3, 31.9, 38.6]],
-    [60, 64, [25.5, 35.2, 42.4, 49.5, 59.3], [15.2, 21.6, 26.2, 30.8, 37.4]], [65, 69, [23.7, 33.1, 40.1, 47.2, 56.8], [14.3, 20.6, 25.0, 29.4, 35.8]],
-    [70, 74, [21.9, 30.9, 37.7, 44.7, 54.1], [13.2, 19.3, 23.6, 27.9, 34.1]], [75, 79, [20.0, 28.4, 35.1, 41.9, 51.1], [12.0, 17.9, 22.1, 26.2, 32.2]],
-    [80, 84, [18.0, 25.9, 32.3, 39.0, 48.0], [10.7, 16.4, 20.4, 24.4, 30.2]], [85, 89, [15.9, 23.2, 29.4, 35.9, 44.6], [9.3, 14.8, 18.6, 22.4, 28.0]],
-    [90, 120, [13.7, 20.4, 26.3, 32.7, 41.2], [7.8, 13.1, 16.7, 20.4, 25.7]],
-  ] as [number, number, Anchors, Anchors][]).map(row),
-  balance: [balRow(0, 39, 13.1, 16.9), balRow(40, 49, 13.5, 12.0), balRow(50, 59, 7.9, 8.6), balRow(60, 69, 3.6, 5.1), balRow(70, 79, 3.7, 2.6), balRow(80, 120, 2.1, 1.8)],
-  // CSEP-PATH; men full, women knees. 70+ extrapolated.
-  pushups: ([
-    [0, 29, [8, 22, 25, 29, 40], [4, 15, 18, 21, 35]], [30, 39, [5, 17, 19, 22, 35], [3, 13, 16, 20, 31]], [40, 49, [4, 13, 15, 17, 30], [2, 11, 13, 15, 29]],
-    [50, 59, [3, 10, 11, 13, 26], [0, 7, 9, 11, 27]], [60, 69, [2, 8, 9, 11, 22], [0, 5, 8, 12, 20]], [70, 120, [1, 6, 7, 9, 18], [0, 4, 6, 9, 16]],
-  ] as [number, number, Anchors, Anchors][]).map(row),
-  // Sitting-rising test; estimates consistent with Araujo 2020.
-  floor: ([
-    [0, 39, [6.5, 8.5, 9.5, 10, 10], [6.5, 8.5, 9.5, 10, 10]], [40, 49, [5.5, 7.5, 8.5, 9.5, 10], [5, 7, 8.5, 9.5, 10]], [50, 59, [4.5, 6.5, 7.5, 8.5, 9.5], [4, 6, 7.5, 8.5, 9.5]],
-    [60, 69, [3, 5, 6.5, 7.5, 9], [2.5, 4.5, 6, 7.5, 9]], [70, 79, [1.5, 3.5, 5, 6.5, 8], [1, 3, 4.5, 6, 8]], [80, 120, [0.5, 2, 3.5, 5, 7], [0, 1.5, 3, 4.5, 6.5]],
-  ] as [number, number, Anchors, Anchors][]).map(row),
-  wallsit: [wallRow(0, 39, 60), wallRow(40, 49, 50), wallRow(50, 59, 45), wallRow(60, 69, 35), wallRow(70, 79, 25), wallRow(80, 120, 18)],
-};
+/** Low-grip flag at any age (EWGSOP2, Cruz-Jentoft 2019). */
+export const LOW_GRIP: Record<Sex, number> = { M: 27, F: 16 };
 
 export const TESTS: Record<TestId, { name: string; short: string; unit: string; step: number; max: number; mode?: "decimal" | "numeric"; hint?: string }> = {
-  grip: { name: "Grip strength", short: "Grip", unit: "kg", step: 0.5, max: 90, mode: "decimal", hint: "Stronger hand, best of 2 tries." },
-  balance: { name: "One-leg balance, eyes closed", short: "Balance", unit: "sec", step: 0.5, max: 60, mode: "decimal", hint: "Seconds on the stopwatch. Stop at 60." },
-  wallsit: { name: "Wall sit", short: "Wall sit", unit: "sec", step: 1, max: 120, mode: "numeric", hint: "Seconds on the stopwatch. Stop at 120 (2:00 Club)." },
-  pushups: { name: "Push-ups", short: "Push-ups", unit: "reps", step: 1, max: 99, mode: "numeric", hint: "Count in 60 seconds. Men full, women from knees." },
+  grip: { name: "Grip strength", short: "Grip", unit: "kg", step: 0.5, max: 90, mode: "decimal", hint: "Dominant hand, best of 3 squeezes." },
+  balance: { name: "One-leg balance", short: "Balance", unit: "sec", step: 0.5, max: BAL_CAP, mode: "decimal", hint: "Arms crossed, best of 3. Stop at 45." },
+  squat: { name: "Squat hold", short: "Squat hold", unit: "sec", step: 1, max: SQUAT_CAP, mode: "numeric", hint: "Thighs parallel, no wall. Stop at 60 (1:00 Club)." },
+  pushups: { name: "Push-ups", short: "Push-ups", unit: "reps", step: 1, max: 99, mode: "numeric", hint: "As many as they can with good form. Men full, women from knees." },
   floor: { name: "Floor rise", short: "Floor rise", unit: "/10", step: 0.5, max: 10 },
 };
-export const ORDER: TestId[] = ["grip", "balance", "wallsit", "pushups", "floor"];
+export const ORDER: TestId[] = ["grip", "balance", "pushups", "squat", "floor"]; // the order people usually try them
+export const CLUB_SEC = SQUAT_CAP;
+export const balanceLabel = (s: Scores) => (s.balance_eo ? "eyes open" : "eyes closed");
+
+/** Published sources, shown in the report and on the printed sheet. */
+export const SOURCES: Record<TestId, { cite: string; note: string }> = {
+  grip: { cite: "Wang et al., JOSPT 2018 (US adults 18-85); spread from iGRIPS 2025; low-grip cutoffs from EWGSOP2 (Cruz-Jentoft 2019)", note: "Medians from US decade averages." },
+  balance: { cite: "Springer et al., J Geriatr Phys Ther 2007 (549 adults 18-99)", note: "Best of 3, stopped at 45 seconds. Men and women did not differ, so both use the same norms." },
+  squat: { cite: "No validated age norms exist for a squat or wall-sit hold", note: "Groove estimate. Read it as directional." },
+  pushups: { cite: "ACSM Guidelines for Exercise Testing and Prescription; CSEP", note: "Untimed, to fatigue. No validated norms past 70, so 70+ is extended from the 60s." },
+  floor: { cite: "Brito et al., Eur J Prev Cardiol 2012 (2,002 adults 51-80); Araujo et al., Eur J Prev Cardiol 2020 (6,141 adults) and 2025 (4,282 adults 46-75, 12-year follow-up)", note: "Tiers follow the mortality risk bands. The age comparison is modeled from published findings." },
+};
+
 export const BRACKETS = [["u40", "Under 40", 0, 39], ["40s", "40s", 40, 49], ["50s", "50s", 50, 59], ["60s", "60s", 60, 69], ["70p", "70+", 70, 120]] as const;
 export const bracketOf = (age: number) => (BRACKETS.find((b) => age >= b[2] && age <= b[3]) ?? BRACKETS[0])[0];
 
-const anchorsFor = (t: TestId, age: number, sex: Sex) => {
+const anchorsFor = (t: NormKey, age: number, sex: Sex) => {
   const rows = NORMS[t];
   return (rows.find((r) => age >= r.a && age <= r.b) ?? rows[rows.length - 1])[sex];
 };
 
-export function percentile(t: TestId, age: number, sex: Sex, raw: number | null | undefined): number | null {
+const keyOf = (t: TestId, eo?: boolean): NormKey => (t === "balance" && eo ? "balance_eo" : t);
+export function percentile(t: TestId, age: number, sex: Sex, raw: number | null | undefined, eo?: boolean): number | null {
   if (raw == null || isNaN(raw)) return null;
   if (raw <= 0) return 1;
-  const an = anchorsFor(t, age, sex), xs = [0, ...an], ys = [0, ...PCTS];
+  const an = anchorsFor(keyOf(t, eo), age, sex), xs = [0, ...an], ys = [0, ...PCTS];
   let p = 0;
   if (raw >= an[4]) {
-    const extra = an[4] * 0.3 || 1;
-    p = 95 + Math.min(4, ((raw - an[4]) / extra) * 4);
-    if (an[3] === an[4]) p = 95;
+    const first = an.findIndex((x) => x >= an[4]);
+    if (first < 4) p = (PCTS[first] + 100) / 2; // many people hit the cap: rank ties at the middle of the tied group
+    else p = 95 + Math.min(4, ((raw - an[4]) / (an[4] * 0.3 || 1)) * 4);
   } else {
     for (let i = 0; i < xs.length - 1; i++) {
       if (raw >= xs[i] && raw <= xs[i + 1]) { p = xs[i + 1] === xs[i] ? ys[i + 1] : ys[i] + ((raw - xs[i]) / (xs[i + 1] - xs[i])) * (ys[i + 1] - ys[i]); break; }
@@ -84,8 +118,8 @@ export function percentile(t: TestId, age: number, sex: Sex, raw: number | null 
 }
 
 /** Raw value at a given percentile (used for typical, top 10%, and projections). */
-export function valueAt(t: TestId, age: number, sex: Sex, p: number): number {
-  const an = anchorsFor(t, age, sex), xs = [0, ...an], ys = [0, ...PCTS];
+export function valueAt(t: TestId, age: number, sex: Sex, p: number, eo?: boolean): number {
+  const an = anchorsFor(keyOf(t, eo), age, sex), xs = [0, ...an], ys = [0, ...PCTS];
   let v = an[4];
   if (p > 95) v = an[4] * (1 + ((p - 95) / 4) * 0.3);
   else for (let i = 0; i < ys.length - 1; i++) if (p >= ys[i] && p <= ys[i + 1]) { v = xs[i] + ((p - ys[i]) / (ys[i + 1] - ys[i])) * (xs[i + 1] - xs[i]); break; }
@@ -100,35 +134,34 @@ export const tierOf = (p: number): Tier => (p >= 90 ? "elite" : p >= 75 ? "stron
 export interface Person { age: number; sex: Sex; scores: Scores }
 export function pointsOf(p: Person): Partial<Record<TestId, number>> {
   const o: Partial<Record<TestId, number>> = {};
-  ORDER.forEach((t) => { const v = p.scores[t]; if (v != null) o[t] = percentile(t, p.age, p.sex, v)!; });
+  ORDER.forEach((t) => { const v = p.scores[t]; if (v != null) o[t] = percentile(t, p.age, p.sex, v, !!p.scores.balance_eo)!; });
   return o;
 }
 export const combine = (p: Person) => Object.values(pointsOf(p)).reduce((a, b) => a + (b ?? 0), 0);
 export const isFull = (p: Person) => ORDER.every((t) => p.scores[t] != null);
 export const fmt = (t: TestId, v: number | null | undefined) =>
-  v == null ? "" : t === "wallsit" ? `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, "0")}` : Number.isInteger(v) ? String(v) : v.toFixed(1);
-export const unitOf = (t: TestId) => (t === "wallsit" ? "" : TESTS[t].unit === "/10" ? "of 10" : TESTS[t].unit);
+  v == null ? "" : t === "squat" ? `0:${String(Math.round(v)).padStart(2, "0")}` : Number.isInteger(v) ? String(v) : v.toFixed(1);
+export const unitOf = (t: TestId) => (t === "squat" ? "" : TESTS[t].unit === "/10" ? "of 10" : TESTS[t].unit);
 export function clampScore(t: TestId, v: number) { const T = TESTS[t]; return Math.max(0, Math.min(T.max, Math.round(v / T.step) * T.step)); }
 
 /** Age at which their results match the median, averaged across tests (estimate). */
 export function movementAge(p: Person) {
   const ests = ORDER.filter((t) => p.scores[t] != null).map((t) => {
     const v = p.scores[t]!;
-    if (v >= valueAt(t, 35, p.sex, 50)) return 35;
-    for (let a = 35; a <= 90; a++) if (valueAt(t, a, p.sex, 50) <= v) return a;
+    const eo = !!p.scores.balance_eo;
+    if (v >= valueAt(t, 35, p.sex, 50, eo)) return 35;
+    for (let a = 35; a <= 90; a++) if (valueAt(t, a, p.sex, 50, eo) <= v) return a;
     return 90;
   });
   return Math.round(ests.reduce((s, x) => s + x, 0) / ests.length);
 }
 
-/** Public display name: "Linda Rogers" -> "Linda R." (also handles "Linda R." already abbreviated). */
+/** Public display name: first name only, as the release allows ("Linda Rogers" -> "Linda"). */
 export function displayName(full: string) {
-  const parts = full.trim().split(/\s+/);
-  if (parts.length < 2) return parts[0] || "";
-  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+  return full.trim().split(/\s+/)[0] || "";
 }
 
-const NOUNS: Record<TestId, string> = { grip: "grip strength", balance: "balance", wallsit: "leg strength", pushups: "upper-body strength", floor: "floor rise" };
+const NOUNS: Record<TestId, string> = { grip: "grip strength", balance: "balance", squat: "leg strength", pushups: "upper-body strength", floor: "floor rise" };
 /** One-line insight used in the report hero and the results email. */
 export function headlineFor(p: Person) {
   const pts = pointsOf(p) as Record<TestId, number>, done = ORDER.filter((t) => p.scores[t] != null);
@@ -144,19 +177,27 @@ export function headlineFor(p: Person) {
 }
 
 /**
- * Tier for display. Floor rise uses the research risk bands (Brito 2012:
- * 8-10 lowest risk) instead of estimated percentiles, since published age
- * percentiles for it aren't available to us.
+ * Tier for display. Floor rise uses the mortality risk bands (Brito 2012: 8-10 lowest risk,
+ * 6-7.5 about 1.8x, 3.5-5.5 about 3.8x, 0-3 about 6.5x; Araujo 2025: a perfect 10 lowest of all).
  */
+export const FLOOR_BANDS = [
+  { tier: "elite" as const, range: "10", risk: "Lowest risk in the research" },
+  { tier: "strong" as const, range: "8 to 9.5", risk: "Low risk" },
+  { tier: "solid" as const, range: "6 to 7.5", risk: "About 1.8x the risk of 8+" },
+  { tier: "building" as const, range: "Under 6", risk: "About 4 to 6x the risk of 8+" },
+];
 export const floorTier = (score: number): Tier => (score >= 10 ? "elite" : score >= 8 ? "strong" : score >= 6 ? "solid" : "building");
 export function tierFor(t: TestId, p: Person): Tier | null {
   const v = p.scores[t]; if (v == null) return null;
-  return t === "floor" ? floorTier(v) : tierOf(percentile(t, p.age, p.sex, v)!);
+  return t === "floor" ? floorTier(v) : tierOf(percentile(t, p.age, p.sex, v, !!p.scores.balance_eo)!);
 }
 /** 0-100 position on the four-step ladder (equal-width tiers). */
 export function ladderPos(t: TestId, p: Person) {
   const v = p.scores[t]!;
   if (t === "floor") { const tr = floorTier(v); return tr === "elite" ? 87.5 : tr === "strong" ? 50 + ((v - 8) / 2) * 25 : tr === "solid" ? 25 + ((v - 6) / 2) * 25 : (v / 6) * 25; }
-  const pc = percentile(t, p.age, p.sex, v)!, B = [0, 25, 75, 90, 100], i = ["building", "solid", "strong", "elite"].indexOf(tierOf(pc));
+  const pc = percentile(t, p.age, p.sex, v, !!p.scores.balance_eo)!, B = [0, 25, 75, 90, 100], i = ["building", "solid", "strong", "elite"].indexOf(tierOf(pc));
   return (i + (pc - B[i]) / (B[i + 1] - B[i])) * 25;
 }
+
+/** Age rows for a test, for the printed benchmark sheet. eo = balance with eyes open. */
+export const ageRows = (t: TestId, eo?: boolean) => NORMS[keyOf(t, eo)].map((r) => [r.a, r.b] as const);

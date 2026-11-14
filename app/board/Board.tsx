@@ -4,12 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type Entry = { id: string; name: string; d: string; u: string };
 type Profile = { id: string; name: string; group: string; tests: { t: string; name: string; d: string; u: string; tier: string; tierLabel: string }[]; combine: number | null; standing: { rank: number; total: number } | null; club: boolean };
 type Data = { count: number; views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]>; club: string[]; people: Profile[] };
-const VIEWS: [string, string][] = [["overall", "Combine Score"], ["grip", "Grip"], ["balance", "Balance"], ["wallsit", "Wall sit"], ["pushups", "Push-ups"], ["floor", "Floor rise"], ["club", "2:00 Club"]];
+const VIEWS: [string, string][] = [["overall", "Combine Score"], ["grip", "Grip"], ["balance", "Balance"], ["squat", "Squat hold"], ["pushups", "Push-ups"], ["floor", "Floor rise"], ["club", "1:00 Club"]];
 const EXPLAIN: Record<string, string> = {
   overall: "All five tests. Each scores up to 100 against people your age and sex. Max 500.",
-  grip: "Best hand, ranked against your age.", balance: "Eyes closed, one leg. Ranked against your age.",
-  wallsit: "Ranked against your age. Hold two minutes to join the 2:00 Club.", pushups: "Men full, women from the knees. 60 seconds.",
-  floor: "Down to the floor and back up. Scored out of 10.", club: "Held a wall sit for the full two minutes.",
+  grip: "Dominant hand, ranked against your age.", balance: "One leg, ranked against your age (eyes open or closed).",
+  squat: "Ranked against your age. Hold a full minute to join the 1:00 Club.", pushups: "As many as you can. Men full, women from the knees.",
+  floor: "Down to the floor and back up. Scored out of 10.", club: "Held the squat for the full minute.",
 };
 const ROTATE_MS = 10000, IDLE_MS = 30000, POLL_MS = 5000;
 
@@ -81,8 +81,8 @@ export default function Board() {
             <div className="tally"><span className="n num">{data?.count ?? "–"}</span><span className="l">Tested today</span></div>
           </div>
           {view === "club"
-            ? <div className="club"><div className="club-badge"><span className="t">2:00</span><span className="s">Club</span></div>
-                <div className="club-names">{data?.club.length ? data.club.map((n, i) => <span key={i}>{n}</span>) : <span className="em">No members yet. Two minutes. You in?</span>}</div></div>
+            ? <div className="club"><div className="club-badge"><span className="t">1:00</span><span className="s">Club</span></div>
+                <div className="club-names">{data?.club.length ? data.club.map((n, i) => <span key={i}>{n}</span>) : <span className="em">No members yet. One minute. You in?</span>}</div></div>
             : <div className="b-cols">{(data?.views[view] ?? []).map((c) => (
                 <div className="b-col" key={c.label}><h3>{c.label}</h3><span className="sx">Women</span>{[0, 1].map((i) => slot(c.F[i], i))}<span className="sx">Men</span>{[0, 1].map((i) => slot(c.M[i], i))}</div>))}</div>}
           <div className="b-foot">
@@ -100,7 +100,7 @@ export default function Board() {
           <button type="button" className="b-x" onClick={() => setOpenId(null)} aria-label="Close">×</button>
           <span className="pk">{open.group}</span><h2>{open.name}</h2>
           {open.combine != null && <div className="pc"><span className="v num">{open.combine}</span><span>Combine Score{open.standing ? <><br /><b>#{open.standing.rank}</b> of {open.standing.total} in {open.group.toLowerCase()}</> : null}</span></div>}
-          {open.club && <span className="pclub">2:00 Club</span>}
+          {open.club && <span className="pclub">1:00 Club</span>}
           <div className="pt">{open.tests.map((x) => <div key={x.t} className="prow"><span className="pn">{x.name}</span><span className="pv num">{x.d}<small>{x.u}</small></span><span className={`ptier ${x.tier}`}>{x.tierLabel}</span></div>)}</div>
           {open.combine == null && <p className="pnote">Finish all five tests to get a Combine Score and a spot on the Combine board.</p>}
         </>}</aside>
