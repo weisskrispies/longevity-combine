@@ -742,3 +742,7 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .pb-who .g { display: block; font-size: 13px; font-weight: 700; color: var(--teal); margin: 2px 0 4px; }
 .pb-who p { margin: 0; font-size: 14px; color: var(--ink-2); }
 .c-hero h1 { max-width: 16ch; }
+.lbin { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.lbin label { font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.lbin input { width: 110px; min-height: 48px; text-align: right; font-family: var(--display); font-weight: 800; font-size: 26px; padding: 0 12px; }
+.lbin span { font-weight: 700; color: var(--ink-2); }

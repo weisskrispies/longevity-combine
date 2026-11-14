@@ -270,6 +270,8 @@ function ScoresStep({ v, onSign, onScores, onClose, onNext }: { v: Visitor; onSi
   };
   const ctl = (k: keyof Floor, l: string) => <div className="fctl"><span>{l}</span><div className="step"><button type="button" onClick={() => tap(k, -1)} aria-label={`One fewer: ${l}`}>−</button><b className="num">{fl[k]}</b><button type="button" onClick={() => tap(k, 1)} aria-label={`One more: ${l}`}>+</button></div></div>;
   const nums: TestId[] = ["grip", "balance", "pushups", "squat"];
+  const [lbRaw, setLbRaw] = useState(v.scores.grip_lb != null ? String(v.scores.grip_lb) : "");
+  const setLb = (x: string) => { setLbRaw(x); const n = Number(x.replace(",", ".")), scores = { ...v.scores }; if (x.trim() === "" || isNaN(n) || n <= 0) delete scores.grip_lb; else scores.grip_lb = Math.min(250, Math.round(n * 2) / 2); onScores(scores); };
   const setEyes = (open: boolean) => { const scores = { ...v.scores }; if (open) scores.balance_eo = 1; else delete scores.balance_eo; onScores(scores); };
   const locked = v.waiver_id === null; // null = not signed; undefined = waiver SQL not run yet, so don't lock
   return (
@@ -280,6 +282,7 @@ function ScoresStep({ v, onSign, onScores, onClose, onNext }: { v: Visitor; onSi
         <div className="entries">
           {nums.map((t, i) => (
             <div className={`entry ${locked && t !== "grip" ? "locked" : ""}`} key={t}><div className="l"><label htmlFor={`in-${t}`}>{TESTS[t].name}</label><span className="hint">{TESTS[t].hint}</span>
+                {t === "grip" && <div className="lbin"><label htmlFor="in-grip-lb">Pounds</label><input className="input num" id="in-grip-lb" inputMode="decimal" autoComplete="off" placeholder="–" value={lbRaw} onChange={(e) => setLb(e.target.value.slice(0, 5))} /><span>lb</span></div>}
                 {t === "balance" && <div className="seg eyes" role="group" aria-label="Eyes">{[false, true].map((o) => <button key={String(o)} type="button" aria-pressed={!!v.scores.balance_eo === o} disabled={locked} onClick={() => setEyes(o)}>{o ? "Eyes open" : "Eyes closed"}</button>)}</div>}</div>
               <div className="r"><div className="unit-in"><input ref={(el) => { refs.current[i] = el; }} className="input num" id={`in-${t}`} inputMode={TESTS[t].mode} enterKeyHint="next" autoComplete="off" placeholder="–" autoFocus={i === 0} disabled={locked && t !== "grip"}
                 value={raw[t]} onChange={(e) => setNum(t, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const n = refs.current[i + 1]; if (n) n.focus(); else e.currentTarget.blur(); } }} /><span>{TESTS[t].unit}</span></div>

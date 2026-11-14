@@ -39,7 +39,7 @@ export async function GET() {
     const p = { age: v.age, sex: v.sex as Sex, scores: v.scores }, br = BRACKETS.find((b) => b[0] === bracketOf(v.age))!;
     return {
       id: v.id, name: displayName(v.name), group: `${v.sex === "F" ? "Women" : "Men"}, ${br[1]}`,
-      tests: ORDER.filter((t) => v.scores[t] != null).map((t) => { const tr = tierFor(t, p)!; return { t, name: t === "balance" ? `Balance, ${balanceLabel(v.scores)}` : TESTS[t].name, d: fmt(t, v.scores[t]), u: unitOf(t), tier: tr, tierLabel: TIER[tr] }; }),
+      tests: ORDER.filter((t) => v.scores[t] != null).map((t) => { const tr = tierFor(t, p)!; return { t, name: t === "balance" ? `Balance, ${balanceLabel(v.scores)}` : TESTS[t].name, d: fmt(t, v.scores[t]), u: t === "grip" && v.scores.grip_lb ? `pct · ${v.scores.grip_lb} lb` : unitOf(t), tier: tr, tierLabel: TIER[tr] }; }),
       combine: isFull(p) ? combine(p) : null, standing: groupRank.get(v.id) ?? null, club: (v.scores.squat ?? 0) >= CLUB_SEC,
     };
   });

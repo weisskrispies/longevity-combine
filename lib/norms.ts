@@ -7,7 +7,7 @@
 export type Sex = "F" | "M";
 export type TestId = "grip" | "balance" | "squat" | "pushups" | "floor";
 /** Raw results keyed by test. balance_eo = 1 when balance was done eyes open (default is eyes closed). */
-export type Scores = Partial<Record<TestId, number>> & { balance_eo?: number };
+export type Scores = Partial<Record<TestId, number>> & { balance_eo?: number; grip_lb?: number };
 type Anchors = number[]; // P5, P25, P50, P75, P95
 interface Row { a: number; b: number; F: Anchors; M: Anchors }
 type NormKey = TestId | "balance_eo";
@@ -72,7 +72,7 @@ const NORMS: Record<NormKey, Row[]> = {
 export const LOW_GRIP: Record<Sex, number> = { M: 27, F: 16 };
 
 export const TESTS: Record<TestId, { name: string; short: string; unit: string; step: number; max: number; mode?: "decimal" | "numeric"; hint?: string }> = {
-  grip: { name: "Grip strength", short: "Grip", unit: "pct", step: 1, max: 99, mode: "numeric", hint: "Enter the percentile from Able Assess. It's already adjusted for age and sex." },
+  grip: { name: "Grip strength", short: "Grip", unit: "pct", step: 1, max: 99, mode: "numeric", hint: "From Able Assess: the percentile (already adjusted for age and sex) and pounds." },
   balance: { name: "One-leg balance", short: "Balance", unit: "sec", step: 0.5, max: BAL_CAP, mode: "decimal", hint: "Arms crossed, best of 3. Stop at 45." },
   squat: { name: "Squat hold", short: "Squat hold", unit: "sec", step: 1, max: SQUAT_CAP, mode: "numeric", hint: "Thighs parallel, no wall. Stop at 60 (1:00 Club)." },
   pushups: { name: "Push-ups", short: "Push-ups", unit: "reps", step: 1, max: 99, mode: "numeric", hint: "As many as they can with good form. Men full, women from knees." },
