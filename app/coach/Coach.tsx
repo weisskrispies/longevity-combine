@@ -91,13 +91,18 @@ export default function Coach() {
         {errBox}
         <div className="c-home">
           <div className="c-top">
-            <QuickGrip onJoin={(p) => { setPre(p); setMode("visitor"); }} />
+            <section className="c-hero"><Waves />
+              <span className="ov">Groove Combine</span>
+              <h1>Want on the leaderboard?</h1>
+              <p>Grip happens on Able Assess. When they want on the board or to try more, they sign the waiver here and you enter their scores.</p>
+              <button className="btn gold" onClick={() => setMode("visitor")}>New participant</button>
+            </section>
             <section className="c-tips">
               <span className="eyebrow">On the floor</span>
               <ul>
-                <li><b>Open with grip.</b> Anyone walking by, no waiver. Then balance, then push-ups if they&rsquo;re into it.</li>
-                <li><b>Pivot after the score.</b> &ldquo;These are the measures our PTs track with Medicare members. Who do you work with?&rdquo;</li>
-                <li><b>Safety first.</b> Ask about injuries or dizziness. Spot every balance and floor test.</li>
+                <li><b>Grip first, on Able Assess.</b> Anyone walking by, no waiver. Then balance, then push-ups if they&rsquo;re into it.</li>
+                <li><b>Pivot.</b> &ldquo;These are the measures our PTs track with our members. Who do you work with?&rdquo;</li>
+                <li><b>Safety.</b> &ldquo;Any recent falls, injuries, or surgeries that would make this a bad idea?&rdquo; Any hesitation, grip only.</li>
               </ul>
               <button className="btn secondary" onClick={() => setMode("playbook")}>Full playbook</button>
             </section>
@@ -180,37 +185,14 @@ function WaiverModal({ forName, visitorId, onClose, onSigned, show }: { forName?
 }
 
 type Pre = { age?: number; sex?: Sex; grip?: number };
-
-function QuickGrip({ onJoin }: { onJoin: (p: Pre) => void }) {
-  const [age, setAge] = useState(""), [sex, setSex] = useState<Sex | "">(""), [kg, setKg] = useState("");
-  const a = Number(age), g = Number(kg.replace(",", ".")), ready = a >= 18 && a <= 105 && !!sex && kg.trim() !== "" && g > 0 && g <= 90;
-  const pc = ready ? percentile("grip", a, sex as Sex, g)! : 0, tr = ready ? tierOf(pc) : null, who = sex === "F" ? "women" : "men";
-  const low = ready && g < LOW_GRIP[sex as Sex];
-  const reset = () => { setAge(""); setSex(""); setKg(""); };
-  return (
-    <section className="c-hero qg"><Waves />
-      <div className="qg-head"><span className="ov">Quick grip</span><h1>Anyone walking by</h1><p>Dominant hand, best of 3. Nothing is saved.</p></div>
-      <div className="qg-in">
-        <div className="field"><label htmlFor="qg-age">Age</label><input className="input num" id="qg-age" inputMode="numeric" autoComplete="off" placeholder="–" value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 3))} /></div>
-        <div className="field"><span className="lab">Sex</span><div className="seg qg-sex" role="group" aria-label="Sex">{(["F", "M"] as Sex[]).map((x) => <button key={x} type="button" aria-pressed={sex === x} onClick={() => setSex(x)}>{x === "F" ? "Female" : "Male"}</button>)}</div></div>
-        <div className="field"><label htmlFor="qg-kg">Grip</label><div className="unit-in"><input className="input num" id="qg-kg" inputMode="decimal" autoComplete="off" placeholder="–" value={kg} onChange={(e) => setKg(e.target.value.slice(0, 5))} /><span>kg</span></div></div>
-      </div>
-      {ready && tr && <div className="qg-out" aria-live="polite"><span className={`pill ${tr}`}>{TIER[tr]}</span>
-        <p>{pc >= 50 ? <>Stronger than <b>{pc}%</b> of {who} their age.</> : <>Typical for {who} their age is <b>{fmt("grip", valueAt("grip", a, sex as Sex, 50))} kg</b>.</>}{low ? <> Below the {LOW_GRIP[sex as Sex]} kg low-strength line.</> : null}</p></div>}
-      <div className="qg-act">
-        <button className="btn gold" onClick={() => { onJoin(ready ? { age: a, sex: sex as Sex, grip: clampScore("grip", g) } : {}); reset(); }}>{ready ? "Join the Combine ›" : "New participant"}</button>
-        {(age || sex || kg) && <button type="button" className="qg-reset" onClick={reset}>Next person</button>}
-      </div>
-    </section>
-  );
-}
+const YEAR = new Date().getFullYear();
 
 function VisitorStep({ pre, onClose, onCreated, show }: { pre: Pre | null; onClose: () => void; onCreated: (v: Visitor) => void; show: (m: string) => void }) {
   const [waiver, setWaiver] = useState<Signed | null>(null), [wOpen, setWOpen] = useState(true);
-  const [d, setD] = useState({ first: "", last: "", age: pre?.age ? String(pre.age) : "", sex: pre?.sex || "", opt_in: false, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
+  const [d, setD] = useState({ first: "", last: "", by: "", sex: pre?.sex || "", opt_in: false, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: unknown) => setD((x) => ({ ...x, [k]: v }));
-  const age = Number(d.age), ok = d.first.trim() && age >= 18 && age <= 105 && d.sex && (!d.giveaway || emailOk(d.email));
+  const by = Number(d.by), age = d.by.length === 4 ? YEAR - by : 0, ok = d.first.trim() && age >= 18 && age <= 105 && d.sex && (!d.giveaway || emailOk(d.email));
   const chip = (name: string, val: string, label: string) => (
     <span key={val}><input type="radio" name={name} id={`${name}-${val}`} checked={(d as Record<string, unknown>)[name] === val} onChange={() => set(name, val)} /><label htmlFor={`${name}-${val}`}>{label}</label></span>
   );
@@ -235,7 +217,7 @@ function VisitorStep({ pre, onClose, onCreated, show }: { pre: Pre | null; onClo
               <div className="field"><label htmlFor="f-last">Last name <span className="opt">optional</span></label><input className="input" id="f-last" autoComplete="off" autoCapitalize="words" enterKeyHint="next" placeholder="Rogers" value={d.last} onChange={(e) => set("last", e.target.value)} /></div>
             </div>
             <div className="grid2">
-              <div className="field"><label htmlFor="f-age">Age</label><input className="input num" id="f-age" type="number" inputMode="numeric" min={18} max={105} placeholder="64" value={d.age} onChange={(e) => set("age", e.target.value)} /></div>
+              <div className="field"><label htmlFor="f-by">Birth year {age >= 18 && age <= 105 ? <span className="opt">age {age} this year</span> : null}</label><input className="input num" id="f-by" inputMode="numeric" autoComplete="off" placeholder="1966" value={d.by} onChange={(e) => set("by", e.target.value.replace(/\D/g, "").slice(0, 4))} /></div>
               <div className="field"><span className="lab">Sex</span><div className="chips seg">{chip("sex", "F", "Female")}{chip("sex", "M", "Male")}</div></div>
             </div>
             <div>
@@ -366,43 +348,66 @@ function ResultsStep({ v, onEdit, onClose, onEmail, onOptIn }: { v: Visitor; onE
 }
 
 function Playbook({ onClose }: { onClose: () => void }) {
+  const who: [string, string, string][] = [
+    ["Medical group, IPA, ACO", "Tag A, get Patrick", "“We give your older members ongoing strength and balance care that clinic PT can’t sustain. No lift for your team: we enroll, assess, deliver care, and bill. 87% are still active at 6 months.”"],
+    ["Medicare Advantage plan", "Tag A, get Patrick", "“We already bill several California MA plans, so members can start without a new contract. 87% active at 6 months. Partners get an outcomes readout.”"],
+    ["Health system or practice", "Tag A or B", "“Most progress in these conditions happens between appointments. That’s the gap we fill. Where do your patients go after a DEXA scan?”"],
+    ["Care partner (menopause, GLP-1, senior care)", "Tag A if they serve women 50+ or Medicare members in California, else B", "“When your members get a low DEXA or start losing strength, where do you send them today? It’s covered by Medicare, so referring costs them nothing, and we report back.”"],
+    ["Investor", "Tag B, get Patrick", "“500+ members, billing Medicare since March. Patrick would love to grab coffee after the show.” No pitching."],
+    ["Press", "Get Patrick", "No quotes from the team. If Patrick’s busy, take their card for Headstart (Kailey)."],
+    ["Older adult or caregiver", "Tag C", "“Care at home from a PT and physician team, covered by Medicare in California. Scan to check if you or your parent is eligible.”"],
+    ["Other startups and vendors", "Friendly and brief", "Swap cards if there’s a real fit. Keep the stations free."],
+  ];
   return (
     <div className="sheet-in"><div className="s-head"><span /><span className="eyebrow" style={{ textAlign: "center" }}>Floor playbook</span><button className="x" onClick={onClose} aria-label="Close">×</button></div>
       <div className="s-body pb">
         <h2 className="s-title" id="s-title">How to run the Combine</h2>
+        <p className="pb-goal"><b>The goal:</b> pull people in with a test, give them a great few minutes, find the medical groups, health plans and health systems, and get Patrick.</p>
         <div className="pb-grid">
           <section className="panel"><h3>Pull people in</h3><ul>
-            <li>Stand at the aisle edge, never behind the counter. Keep one person mid-test; a test in progress draws a crowd.</li>
-            <li>&ldquo;Want to see how your grip stacks up for your age?&rdquo; It takes 30 seconds and it&rsquo;s the easiest yes.</li>
-            <li>&ldquo;Most people can&rsquo;t stand on one leg for 10 seconds with their eyes closed. Want to try?&rdquo;</li>
-            <li>&ldquo;Hold a squat for a full minute and you&rsquo;re in the 1:00 Club.&rdquo;</li>
-            <li>Point at the board: &ldquo;Your age group has an open spot.&rdquo;</li></ul></section>
-          <section className="panel"><h3>Pivot after the score (60 to 90 sec)</h3><ul>
-            <li><b>Health plan or medical group:</b> &ldquo;Grip and balance are measures our PTs track for Medicare members with osteoporosis and sarcopenia, billed through RTM. How does your group handle MSK between visits?&rdquo;</li>
-            <li><b>Health system:</b> &ldquo;Most of the progress in these conditions happens between appointments. That&rsquo;s the gap we fill. Where do your patients go after a DEXA?&rdquo;</li>
-            <li><b>Investor:</b> &ldquo;We&rsquo;re the clinical, Medicare-covered version of this. Happy to show you the retention curve.&rdquo; Then find Patrick.</li>
-            <li><b>Press:</b> bring them to Patrick.</li>
-            <li><b>Anyone with a parent:</b> hand them the card.</li></ul></section>
+            <li>Stand at the aisle edge, never behind the counter. No sitting, no phones out.</li>
+            <li>Keep someone mid-test whenever you can. Motion is what makes people stop.</li>
+            <li>Ask, don&rsquo;t pitch: &ldquo;Want to see how your grip stacks up for your age?&rdquo;</li>
+            <li>&ldquo;Can you stand on one leg, eyes closed, for 10 seconds?&rdquo;</li>
+            <li>&ldquo;Can you get up off the floor without your hands? Most people can&rsquo;t.&rdquo;</li></ul></section>
+          <section className="panel"><h3>The flow (about 5 minutes)</h3><ol>
+            <li><b>Grip on Able Assess.</b> 15 seconds, no waiver, the easiest yes.</li>
+            <li><b>Want on the board or to try more?</b> New participant here: waiver, birth year, sex, optional email. Scan their badge.</li>
+            <li><b>Test.</b> Balance next, push-ups if they&rsquo;re into it, then squat hold and floor rise. Enter the grip percentile from Able Assess. Say the score and one line on what it means for their age.</li>
+            <li><b>Pivot.</b> &ldquo;These are the measures our PTs track with our members. Who do you work with?&rdquo;</li>
+            <li><b>Close.</b> QR for their results, a headband or bar, tag the scan. Flyers only after a real conversation, handed over, never stacked.</li></ol></section>
+          <section className="panel wide"><h3>Who you&rsquo;re talking to</h3><p className="small muted">Glance at their badge before you pivot. In priority order. Not sure? Ask &ldquo;Who do you work with?&rdquo;</p>
+            <div className="pb-who">{who.map(([w, g, say]) => <div key={w}><b>{w}</b><span className="g">{g}</span><p>{say}</p></div>)}</div></section>
           <section className="panel"><h3>Qualify in three questions</h3><ol>
-            <li>Who do you work with?</li><li>Do you cover or care for Medicare members?</li><li>Who owns MSK or fall prevention on your side?</li></ol>
-            <p className="small muted">Pick their answer under &ldquo;What do you do?&rdquo; in setup. Plans and medical groups get tagged A for follow-up.</p></section>
+            <li>Who do you work with?</li><li>Do you cover or care for Medicare members?</li><li>Who owns bone health, falls, or MSK on your side?</li></ol>
+            <p className="small"><b>Tags:</b> A = reason to meet, get Patrick. B = relevant, no near-term ask. C = personal or a parent, eligibility QR. Pick their answer under &ldquo;What do you do?&rdquo; and the app tags them.</p></section>
+          <section className="panel"><h3>Groove in one line</h3>
+            <p>Groove gives older adults with osteoporosis, osteopenia, sarcopenia, and arthritis ongoing care at home from a dedicated physical therapist and physician team, billed to Medicare.</p>
+            <p className="small"><b>Numbers we use, nothing else:</b> 87% of members still active at 6 months · 500+ members in California · members average 3.5 sessions a week · billed to Original Medicare and select Medicare Advantage plans in California (Aetna, Anthem Blue Cross, UnitedHealthcare, Humana PPO, Blue Shield of California). HMOs not yet.</p></section>
+          <section className="panel"><h3>Never say</h3><ul>
+            <li>&ldquo;Remote physical therapy.&rdquo; Say &ldquo;ongoing care from a physical therapist and physician team.&rdquo;</li>
+            <li>&ldquo;AI-powered.&rdquo;</li>
+            <li>Conditions beyond osteoporosis, osteopenia, sarcopenia, and arthritis (no back pain).</li>
+            <li>Coverage outside California.</li>
+            <li>A diagnosis from a score. Say &ldquo;below the typical range for your age,&rdquo; never &ldquo;you have sarcopenia.&rdquo;</li>
+            <li>Revenue, burn, or fundraising details.</li></ul></section>
           <section className="panel"><h3>Safety</h3><ul>
-            <li>Before any test: &ldquo;Any injuries, recent surgery, or dizziness today?&rdquo;</li>
-            <li>Stand beside them for balance and floor rise, within arm&rsquo;s reach.</li>
-            <li>Anyone hesitant does balance with eyes open. Tap &ldquo;Eyes open&rdquo; so they&rsquo;re compared fairly.</li>
-            <li>Grip is fine for anyone. Everything after grip needs the waiver.</li>
-            <li>Anyone who hesitates gets a different test. Never push.</li>
-            <li>Say &ldquo;below typical for your age,&rdquo; never &ldquo;you have sarcopenia.&rdquo;</li></ul></section>
+            <li>Before every test: &ldquo;Any recent falls, injuries, or surgeries that would make this a bad idea?&rdquo; Any hesitation, grip only.</li>
+            <li>Balance is eyes closed by default. Anyone unsteady goes eyes open; tap &ldquo;Eyes open&rdquo; so they&rsquo;re compared fairly.</li>
+            <li>Spot every balance and floor-rise attempt, within arm&rsquo;s reach.</li>
+            <li>Nicole has final say on anyone&rsquo;s test.</li></ul></section>
           <section className="panel"><h3>Scoring quick reference</h3><ul>
-            <li><b>Grip:</b> dominant hand, best of 3 squeezes. No waiver needed.</li>
-            <li><b>Balance:</b> arms crossed, best of 3. Eyes closed by default; switch to eyes open for anyone unsteady. Stop at 45 seconds.</li>
+            <li><b>Grip:</b> on Able Assess, dominant hand, best of 3. Enter its percentile; it&rsquo;s already adjusted for age and sex.</li>
+            <li><b>Balance:</b> arms crossed, best of 3. Stop at 45 seconds.</li>
             <li><b>Push-ups:</b> as many as they can with good form, no time limit. Men full, women from knees. Chest to a fist.</li>
             <li><b>Squat hold:</b> thighs parallel, arms forward, no wall. Stop at 60 seconds (1:00 Club).</li>
-            <li><b>Floor rise:</b> start at 10. Minus 1 per hand, knee, forearm or side of leg. Minus ½ per wobble.</li></ul></section>
-          <section className="panel"><h3>Wrap up</h3><ul>
-            <li>Show them their results on the iPad, then the QR code.</li>
-            <li>Get an email so their report and plan reach them.</li>
-            <li>Bars for anyone who stops, headbands for anyone who tests, band sets for all five.</li></ul></section>
+            <li><b>Floor rise:</b> start at 10. Minus 1 per hand, knee, forearm or side of leg. Minus ½ per wobble. One hand each way is an 8.</li></ul></section>
+          <section className="panel"><h3>Each day</h3><ul>
+            <li>Never fewer than two at the booth. Breaks one at a time.</li>
+            <li><b>When it&rsquo;s busy:</b> start people on the waiver while they wait, and steer them to grip to keep the line moving.</li>
+            <li><b>4:00pm:</b> announce the daily speaker winner (Wednesday at 11:30).</li>
+            <li><b>End of day:</b> export the CSV and badge scans, every scan tagged A, B or C. Post the leaderboard on LinkedIn with winners&rsquo; permission only.</li>
+            <li>Don&rsquo;t let a 5-minute visit become 20 unless it&rsquo;s an A lead.</li></ul></section>
         </div>
       </div>
     </div>

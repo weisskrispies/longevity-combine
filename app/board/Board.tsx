@@ -7,7 +7,7 @@ type Data = { count: number; views: Record<string, { label: string; F: Entry[]; 
 const VIEWS: [string, string][] = [["overall", "Combine Score"], ["grip", "Grip"], ["balance", "Balance"], ["squat", "Squat hold"], ["pushups", "Push-ups"], ["floor", "Floor rise"], ["club", "1:00 Club"]];
 const EXPLAIN: Record<string, string> = {
   overall: "All five tests. Each scores up to 100 against people your age and sex. Max 500.",
-  grip: "Dominant hand, ranked against your age.", balance: "One leg, ranked against your age (eyes open or closed).",
+  grip: "Percentile for your age and sex, from the Able Assess dynamometer.", balance: "One leg, ranked against your age (eyes open or closed).",
   squat: "Ranked against your age. Hold a full minute to join the 1:00 Club.", pushups: "As many as you can. Men full, women from the knees.",
   floor: "Down to the floor and back up. Scored out of 10.", club: "Held the squat for the full minute.",
 };

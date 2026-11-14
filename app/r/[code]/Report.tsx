@@ -79,13 +79,14 @@ export default function Report({ code }: { code: string }) {
   const mAge = movementAge(p), showAge = d.age >= 45 && done.length >= 3, diff = d.age - mAge;
 
   const notes: string[] = [];
-  if (d.scores.grip != null) { const c = d.sex === "F" ? 16 : 27, g = d.scores.grip; notes.push(g >= c + 6 ? `Your grip is well clear of the <b>${c} kg</b> low-strength line clinicians use. Grip is one of the most predictive single measures of healthy aging.` : g >= c ? `Your grip is just above the <b>${c} kg</b> low-strength line. Worth building a buffer, since grip declines steadily after 50.` : `Your grip is below the <b>${c} kg</b> low-strength line clinicians use. Worth raising with your doctor, and it responds well to training.`); }
+  if (d.scores.grip != null) { const g = d.scores.grip; notes.push(g >= 50 ? `Your grip is in the <b>${fmt("grip", g)} percentile</b> for your age. Grip is one of the most predictive single measures of healthy aging, so it's worth keeping.` : g >= 20 ? `Your grip is in the <b>${fmt("grip", g)} percentile</b> for your age. Worth building a buffer, since grip declines steadily after 50.` : `Your grip is in the <b>${fmt("grip", g)} percentile</b>, below the typical range for your age. Worth raising with your doctor, and it responds well to training.`); }
   if (d.scores.balance != null && pts.balance < 50) notes.push(`${d.scores.balance_eo ? "Balance" : "Eyes-closed balance"} falls fastest of anything we tested, and it's also the quickest to come back with daily practice.`);
 
   const gKeys = (d.aspire || "").split(",").filter(Boolean), presets = gKeys.filter((k) => ASPIRE[k]);
   const goals: { label: string; takes?: string }[] = [...presets.map((k) => ({ label: ASPIRE[k].label, takes: ASPIRE[k].takes })), ...(gKeys.includes("other") && d.aspire_text ? [{ label: d.aspire_text }] : [])];
   const fromGoals = [...new Set(presets.flatMap((k) => ASPIRE[k].tests))].filter((t) => d.scores![t] != null).slice(0, 3);
-  const gTests = fromGoals.length ? fromGoals : sorted.slice().reverse().slice(0, 2);
+  const proj = (xs: TestId[]) => xs.filter((t) => t !== "grip"); // grip is a percentile already, so there's no raw value to project
+  const gTests = proj(fromGoals).length ? proj(fromGoals) : proj(sorted.slice().reverse()).slice(0, 2);
   const prio = [...new Set([low, ...gTests, ...sorted.slice().reverse()])].filter((t) => tierFor(t, p) !== "elite").slice(0, 3);
   const habits = prio.length ? prio : [low];
   const retest = new Date(Date.now() + 28 * 864e5).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -102,7 +103,7 @@ export default function Report({ code }: { code: string }) {
           <div className="cmp-card" key={t}><div className="cmp-top"><h3>{tName(t)}</h3><span className="res">{fmt(t, d.scores![t])}<small>{unitOf(t)}</small></span></div>
             <div className="ladder" role="img" aria-label={`${TIER[tr]}${t === "floor" ? " risk band" : ` for your age, ${pc}th percentile`}`}>{TIERS.map((x, i) => <span key={x} className={`seg ${i <= ti ? "on" : ""} ${i <= ti && tr === "elite" ? "elite" : ""}`} />)}<span className="mk" style={{ left: `${ladderPos(t, p)}%` }} /></div>
             <div className="ladder-l">{TIERS.map((x) => <span key={x} className={x === tr ? "on" : ""}>{TIER[x]}</span>)}</div>
-            <p className="cmp-say">{t === "floor" ? <>{d.scores![t]! >= 8 ? <>In the <b>lowest-risk band</b> (8 to 10) in the research on this test.</> : <>The research&rsquo;s lowest-risk band starts at <b>8</b>. Each point counts.</>} {pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50))}</b>.</>}</> : pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50, eo))}{u(t)}</b>.</>}</p></div>); })}</div>
+            <p className="cmp-say">{t === "floor" ? <>{d.scores![t]! >= 8 ? <>In the <b>lowest-risk band</b> (8 to 10) in the research on this test.</> : <>The research&rsquo;s lowest-risk band starts at <b>8</b>. Each point counts.</>} {pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50))}</b>.</>}</> : pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : t === "grip" ? <>Below the middle for {who} your age, with room to build.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50, eo))}{u(t)}</b>.</>}</p></div>); })}</div>
         {notes.length > 0 && <div className="notes">{notes.map((n, i) => <div className="note" key={i}><span style={{ color: "var(--ink)" }}><Idea /></span><p dangerouslySetInnerHTML={{ __html: n }} /></div>)}</div>}
       </section>
       <WaveLine />
@@ -144,7 +145,7 @@ export default function Report({ code }: { code: string }) {
 /* Follow-up paths, tailored to what they told us they do */
 function Paths({ code, d, onUpdate }: { code: string; d: Data; onUpdate: (d: Data) => void }) {
   const [busy, setBusy] = useState(false), [err, setErr] = useState("");
-  const kind = d.role === "investor" ? "investor" : d.role === "press" ? "press" : ["plan", "group", "system"].includes(d.role || "") ? "partner" : null;
+  const kind = d.role === "investor" ? "investor" : d.role === "press" ? "press" : ["plan", "group", "system", "partner"].includes(d.role || "") ? "partner" : null;
   const at = d.company ? ` at ${d.company}` : "";
   const ask = async (interest: string) => {
     setBusy(true); setErr("");

@@ -733,3 +733,12 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .qg-in .unit-in input { width: 100%; text-align: center; font-size: 30px; }
 .qg-in .unit-in { gap: 6px; }
 .qg-in .unit-in span { width: auto; }
+/* Playbook v2 (from the Notion booth docs) */
+.pb-goal { margin: 4px 0 14px; font-size: 17px; }
+.pb-grid .panel.wide { grid-column: 1 / -1; }
+.pb-who { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
+.pb-who > div { border-top: 1px solid var(--line); padding-top: 10px; }
+.pb-who b { display: block; font-size: 15px; }
+.pb-who .g { display: block; font-size: 13px; font-weight: 700; color: var(--teal); margin: 2px 0 4px; }
+.pb-who p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.c-hero h1 { max-width: 16ch; }

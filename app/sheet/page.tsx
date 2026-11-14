@@ -1,10 +1,10 @@
-import { ageRows, valueAt, fmt, LOW_GRIP, SOURCES, TESTS, CLUB_SEC, FLOOR_BANDS, type Sex, type TestId } from "@/lib/norms";
+import { ageRows, valueAt, gripKgAt, fmt, LOW_GRIP, SOURCES, TESTS, CLUB_SEC, FLOOR_BANDS, type Sex, type TestId } from "@/lib/norms";
 
 export const metadata = { title: "Combine Benchmarks" };
 
 const lab = (a: number, b: number) => (a === 0 ? `18–${b}` : b >= 100 ? `${a}+` : `${a}–${b}`);
 const at = (a: number, b: number) => (a === 0 ? b : a);
-const v = (t: TestId, age: number, sex: Sex, p: number, eo?: boolean) => fmt(t, valueAt(t, age, sex, p, eo));
+const v = (t: TestId, age: number, sex: Sex, p: number, eo?: boolean) => (t === "grip" ? fmt("floor", gripKgAt(age, sex, p)) : fmt(t, valueAt(t, age, sex, p, eo)));
 
 /** Typical (50th) and Strong (75th) by age, men and women. */
 function SexTable({ t, unit }: { t: TestId; unit: string }) {
@@ -25,7 +25,7 @@ export default function Sheet() {
         <p>Find your age row. <b>Typical</b> is the middle (50th percentile) for your age. <b>Strong</b> is the top 25%. The top 10% is Elite.</p></header>
 
       <div className="grid">
-        <section><h2>Grip strength <em>kg</em></h2><p className="how">{TESTS.grip.hint}</p>
+        <section><h2>Grip strength <em>kg</em></h2><p className="how">Dominant hand, best of 3. Reference in kg; the app takes Able Assess&rsquo;s percentile.</p>
           <SexTable t="grip" unit="" />
           <p className="flag">Low-strength line at any age: under {LOW_GRIP.M} kg (men), {LOW_GRIP.F} kg (women).</p></section>
 

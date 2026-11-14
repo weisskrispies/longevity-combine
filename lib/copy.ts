@@ -11,7 +11,7 @@ export const WHAT: Record<TestId, string> = {
 export const NOUN: Record<TestId, string> = { grip: "grip strength", balance: "balance", squat: "leg strength", pushups: "upper-body strength", floor: "floor rise" };
 
 export const CLIN: Record<TestId, (sex: Sex, s: Scores) => string> = {
-  grip: (sex) => `Medians come from US adults (Wang 2018). Below ${sex === "F" ? 16 : 27} kg is the European sarcopenia consensus cut-off for low muscle strength at any age (EWGSOP2). In a 17-country cohort, grip predicted cardiovascular events and mortality better than systolic blood pressure (PURE, Lancet 2015).`,
+  grip: () => "Your percentile comes from the Able Assess dynamometer, compared with people your age and sex. Grip is one of the most predictive single measures of healthy aging: in a 17-country cohort, it predicted cardiovascular events and mortality better than systolic blood pressure (PURE, Lancet 2015).",
   balance: (_sex, s) => s.balance_eo
     ? "Eyes open, most people hold the full 45 seconds through their 50s; average best holds drop to about 32 seconds in the 60s and 21 in the 70s (Springer 2007, 549 adults). Older adults who can't hold 5 seconds have a higher risk of injurious falls (Vellas 1997)."
     : "Closing your eyes removes vision, so the test isolates the inner ear and the sensors in your feet. Average best holds fall from about 15 seconds under 40 to about 4 seconds in the 60s (Springer 2007, 549 adults). Men and women score the same.",
@@ -36,8 +36,8 @@ export const ASPIRE: Record<string, { label: string; tests: TestId[]; takes: str
 };
 
 export const ROLES: Record<string, [string, "a" | "b" | "c"]> = {
-  plan: ["Health plan", "a"], group: ["Medical group", "a"], system: ["Health system", "b"], investor: ["Investor", "b"],
-  press: ["Press", "b"], vendor: ["Startup or vendor", "c"], other: ["Something else", "c"],
+  group: ["Medical group, IPA or ACO", "a"], plan: ["Health plan", "a"], system: ["Health system or practice", "a"], partner: ["Care partner", "a"],
+  investor: ["Investor", "b"], press: ["Press", "b"], caregiver: ["Older adult or caregiver", "c"], vendor: ["Startup or vendor", "c"], other: ["Something else", "c"],
 };
 
 export const HABITS: Record<TestId, { title: string; when: string[]; dose: Record<Tier, string>; why: string }> = {

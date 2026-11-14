@@ -72,7 +72,7 @@ const NORMS: Record<NormKey, Row[]> = {
 export const LOW_GRIP: Record<Sex, number> = { M: 27, F: 16 };
 
 export const TESTS: Record<TestId, { name: string; short: string; unit: string; step: number; max: number; mode?: "decimal" | "numeric"; hint?: string }> = {
-  grip: { name: "Grip strength", short: "Grip", unit: "kg", step: 0.5, max: 90, mode: "decimal", hint: "Dominant hand, best of 3 squeezes." },
+  grip: { name: "Grip strength", short: "Grip", unit: "pct", step: 1, max: 99, mode: "numeric", hint: "Enter the percentile from Able Assess. It's already adjusted for age and sex." },
   balance: { name: "One-leg balance", short: "Balance", unit: "sec", step: 0.5, max: BAL_CAP, mode: "decimal", hint: "Arms crossed, best of 3. Stop at 45." },
   squat: { name: "Squat hold", short: "Squat hold", unit: "sec", step: 1, max: SQUAT_CAP, mode: "numeric", hint: "Thighs parallel, no wall. Stop at 60 (1:00 Club)." },
   pushups: { name: "Push-ups", short: "Push-ups", unit: "reps", step: 1, max: 99, mode: "numeric", hint: "As many as they can with good form. Men full, women from knees." },
@@ -84,7 +84,7 @@ export const balanceLabel = (s: Scores) => (s.balance_eo ? "eyes open" : "eyes c
 
 /** Published sources, shown in the report and on the printed sheet. */
 export const SOURCES: Record<TestId, { cite: string; note: string }> = {
-  grip: { cite: "Wang et al., JOSPT 2018 (US adults 18-85); spread from iGRIPS 2025; low-grip cutoffs from EWGSOP2 (Cruz-Jentoft 2019)", note: "Medians from US decade averages." },
+  grip: { cite: "Able Assess percentile, adjusted for age and sex. Reference kg on the printed sheet: Wang et al., JOSPT 2018 (US adults 18-85); low-grip cutoffs from EWGSOP2 (Cruz-Jentoft 2019)", note: "Measured on the Able Assess dynamometer." },
   balance: { cite: "Springer et al., J Geriatr Phys Ther 2007 (549 adults 18-99)", note: "Best of 3, stopped at 45 seconds. Men and women did not differ, so both use the same norms." },
   squat: { cite: "No validated age norms exist for a squat or wall-sit hold", note: "Groove estimate. Read it as directional." },
   pushups: { cite: "ACSM Guidelines for Exercise Testing and Prescription; CSEP", note: "Untimed, to fatigue. No validated norms past 70, so 70+ is extended from the 60s." },
@@ -100,8 +100,13 @@ const anchorsFor = (t: NormKey, age: number, sex: Sex) => {
 };
 
 const keyOf = (t: TestId, eo?: boolean): NormKey => (t === "balance" && eo ? "balance_eo" : t);
+/** Grip is entered as Able Assess's age- and sex-adjusted percentile, so it passes straight through. */
 export function percentile(t: TestId, age: number, sex: Sex, raw: number | null | undefined, eo?: boolean): number | null {
   if (raw == null || isNaN(raw)) return null;
+  if (t === "grip") return Math.max(1, Math.min(99, Math.round(raw)));
+  return pctFromNorms(t, age, sex, raw, eo);
+}
+function pctFromNorms(t: TestId, age: number, sex: Sex, raw: number, eo?: boolean): number {
   if (raw <= 0) return 1;
   const an = anchorsFor(keyOf(t, eo), age, sex), xs = [0, ...an], ys = [0, ...PCTS];
   let p = 0;
@@ -119,12 +124,18 @@ export function percentile(t: TestId, age: number, sex: Sex, raw: number | null 
 
 /** Raw value at a given percentile (used for typical, top 10%, and projections). */
 export function valueAt(t: TestId, age: number, sex: Sex, p: number, eo?: boolean): number {
+  if (t === "grip") return Math.max(1, Math.min(99, Math.round(p)));
+  return valFromNorms(t, age, sex, p, eo);
+}
+/** Grip in kg at a percentile, from our reference norms (used for the sheet and movement age). */
+export const gripKgAt = (age: number, sex: Sex, p: number) => valFromNorms("grip", age, sex, p);
+function valFromNorms(t: TestId, age: number, sex: Sex, p: number, eo?: boolean): number {
   const an = anchorsFor(keyOf(t, eo), age, sex), xs = [0, ...an], ys = [0, ...PCTS];
   let v = an[4];
   if (p > 95) v = an[4] * (1 + ((p - 95) / 4) * 0.3);
   else for (let i = 0; i < ys.length - 1; i++) if (p >= ys[i] && p <= ys[i + 1]) { v = xs[i] + ((p - ys[i]) / (ys[i + 1] - ys[i])) * (xs[i + 1] - xs[i]); break; }
-  const s = TESTS[t].step;
-  return Math.max(0, Math.min(TESTS[t].max, Math.round(v / s) * s));
+  const s = t === "grip" ? 0.5 : TESTS[t].step, mx = t === "grip" ? 90 : TESTS[t].max;
+  return Math.max(0, Math.min(mx, Math.round(v / s) * s));
 }
 
 export type Tier = "building" | "solid" | "strong" | "elite";
@@ -139,18 +150,20 @@ export function pointsOf(p: Person): Partial<Record<TestId, number>> {
 }
 export const combine = (p: Person) => Object.values(pointsOf(p)).reduce((a, b) => a + (b ?? 0), 0);
 export const isFull = (p: Person) => ORDER.every((t) => p.scores[t] != null);
+const ord = (n: number) => { const r = Math.round(n), k = r % 100; return `${r}${k >= 11 && k <= 13 ? "th" : ["th", "st", "nd", "rd"][r % 10] ?? "th"}`; };
 export const fmt = (t: TestId, v: number | null | undefined) =>
-  v == null ? "" : t === "squat" ? `0:${String(Math.round(v)).padStart(2, "0")}` : Number.isInteger(v) ? String(v) : v.toFixed(1);
+  v == null ? "" : t === "grip" ? ord(v) : t === "squat" ? `0:${String(Math.round(v)).padStart(2, "0")}` : Number.isInteger(v) ? String(v) : v.toFixed(1);
 export const unitOf = (t: TestId) => (t === "squat" ? "" : TESTS[t].unit === "/10" ? "of 10" : TESTS[t].unit);
-export function clampScore(t: TestId, v: number) { const T = TESTS[t]; return Math.max(0, Math.min(T.max, Math.round(v / T.step) * T.step)); }
+export function clampScore(t: TestId, v: number) {
+  if (t === "grip") return Math.max(1, Math.min(99, Math.round(v))); const T = TESTS[t]; return Math.max(0, Math.min(T.max, Math.round(v / T.step) * T.step)); }
 
 /** Age at which their results match the median, averaged across tests (estimate). */
 export function movementAge(p: Person) {
   const ests = ORDER.filter((t) => p.scores[t] != null).map((t) => {
-    const v = p.scores[t]!;
     const eo = !!p.scores.balance_eo;
-    if (v >= valueAt(t, 35, p.sex, 50, eo)) return 35;
-    for (let a = 35; a <= 90; a++) if (valueAt(t, a, p.sex, 50, eo) <= v) return a;
+    const v = t === "grip" ? gripKgAt(p.age, p.sex, p.scores.grip!) : p.scores[t]!; // percentile -> kg at their age
+    if (v >= valFromNorms(t, 35, p.sex, 50, eo)) return 35;
+    for (let a = 35; a <= 90; a++) if (valFromNorms(t, a, p.sex, 50, eo) <= v) return a;
     return 90;
   });
   return Math.round(ests.reduce((s, x) => s + x, 0) / ests.length);
