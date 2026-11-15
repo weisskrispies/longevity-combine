@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/server";
+import { SHOW_DAYS, defaultDay, ptDay } from "@/lib/days";
 import { CLUB_SEC, balanceLabel, BRACKETS, ORDER, TIER, TESTS, displayName, tierFor, bracketOf, combine, isFull, percentile, fmt, unitOf, type Sex, type TestId } from "@/lib/norms";
 
 export const dynamic = "force-dynamic";
 type Entry = { id: string; name: string; d: string; u: string };
 
 /** Public leaderboard: names (opted in only) and display values. No ages or emails leave the server. */
-export async function GET() {
-  const { data, error } = await db().from("visitors").select("id, name, age, sex, opt_in, scores");
+export async function GET(req: Request) {
+  const asked = new URL(req.url).searchParams.get("day") || "";
+  const day = asked === "all" || /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : defaultDay();
+  const { data, error } = await db().from("visitors").select("id, name, age, sex, opt_in, scores, created_at");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const all = (data ?? []).filter((v) => v.scores && Object.keys(v.scores).length);
+  const everyone = (data ?? []).filter((v) => v.scores && Object.keys(v.scores).length).map((v) => ({ ...v, day: ptDay(v.created_at) }));
+  const inDay = (v: { day: string }) => day === "all" || v.day === day;
+  const all = everyone.filter(inDay);
   const pub = all.filter((v) => v.opt_in);
   const views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]> = {};
   for (const view of ["overall", ...ORDER] as const) {
@@ -28,20 +33,22 @@ export async function GET() {
     });
   }
   const club = pub.filter((v) => (v.scores.squat ?? 0) >= CLUB_SEC).map((v) => displayName(v.name));
-  // Searchable profiles: opted-in only, age group instead of exact age, no contact details.
+  // Searchable profiles across every day: opted-in only, age group instead of exact age, no contact details.
+  // Each person's standing is within the day they tested, matching their report.
+  const pubAll = everyone.filter((v) => v.opt_in);
   const groupRank = new Map<string, { rank: number; total: number }>();
-  for (const sex of ["F", "M"] as Sex[]) for (const [bid] of BRACKETS) {
-    const field = pub.filter((v) => v.sex === sex && bracketOf(v.age) === bid && isFull({ age: v.age, sex, scores: v.scores }))
+  for (const d of [...new Set(pubAll.map((v) => v.day))]) for (const sex of ["F", "M"] as Sex[]) for (const [bid] of BRACKETS) {
+    const field = pubAll.filter((v) => v.day === d && v.sex === sex && bracketOf(v.age) === bid && isFull({ age: v.age, sex, scores: v.scores }))
       .map((v) => ({ id: v.id, s: combine({ age: v.age, sex, scores: v.scores }) })).sort((a, b) => b.s - a.s);
     field.forEach((f, i) => groupRank.set(f.id, { rank: i + 1, total: field.length }));
   }
-  const people = pub.map((v) => {
+  const people = pubAll.map((v) => {
     const p = { age: v.age, sex: v.sex as Sex, scores: v.scores }, br = BRACKETS.find((b) => b[0] === bracketOf(v.age))!;
     return {
       id: v.id, name: displayName(v.name), group: `${v.sex === "F" ? "Women" : "Men"}, ${br[1]}`,
       tests: ORDER.filter((t) => v.scores[t] != null).map((t) => { const tr = tierFor(t, p)!; return { t, name: t === "balance" ? `Balance, ${balanceLabel(v.scores)}` : TESTS[t].name, d: fmt(t, v.scores[t]), u: t === "grip" && v.scores.grip_lb ? `pct · ${v.scores.grip_lb} lb` : unitOf(t), tier: tr, tierLabel: TIER[tr] }; }),
-      combine: isFull(p) ? combine(p) : null, standing: groupRank.get(v.id) ?? null, club: (v.scores.squat ?? 0) >= CLUB_SEC,
+      combine: isFull(p) ? combine(p) : null, standing: groupRank.get(v.id) ?? null, day: v.day, club: (v.scores.squat ?? 0) >= CLUB_SEC,
     };
   });
-  return NextResponse.json({ count: all.length, views, club, people }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ day, today: ptDay(), days: SHOW_DAYS, count: all.length, views, club, people }, { headers: { "cache-control": "no-store" } });
 }

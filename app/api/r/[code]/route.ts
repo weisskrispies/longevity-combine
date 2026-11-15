@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { db, emailOk, isCoach } from "@/lib/server";
 import { sendReportEmail } from "@/lib/email";
+import { dayLong, ptDay } from "@/lib/days";
 import { BRACKETS, bracketOf, combine, displayName, isFull, type Sex } from "@/lib/norms";
 
 export const dynamic = "force-dynamic";
-const COLS = "id, code, name, age, sex, aspire, aspire_text, role, company, scores, email, emailed_at, interest";
+const COLS = "id, code, name, age, sex, aspire, aspire_text, role, company, scores, email, emailed_at, interest, created_at";
 
-type Row = { id: string; code: string; name: string; age: number; sex: string; aspire: string | null; aspire_text: string | null; role: string | null; company: string | null; scores: Record<string, number>; email: string | null; emailed_at?: string | null; interest?: string | null };
+type Row = { created_at: string; id: string; code: string; name: string; age: number; sex: string; aspire: string | null; aspire_text: string | null; role: string | null; company: string | null; scores: Record<string, number>; email: string | null; emailed_at?: string | null; interest?: string | null };
 async function load(code: string): Promise<Row | null> {
   const c = code.toUpperCase();
   const r = await db().from("visitors").select(COLS).eq("code", c).maybeSingle();
   if (!r.error) return r.data as Row | null;
   // Columns from schema v2 not added yet: fall back so reports still work.
-  const r2 = await db().from("visitors").select("id, code, name, age, sex, aspire, aspire_text, role, company, scores, email").eq("code", c).maybeSingle();
+  const r2 = await db().from("visitors").select("id, code, name, age, sex, aspire, aspire_text, role, company, scores, email, created_at").eq("code", c).maybeSingle();
   return r2.data as Row | null;
 }
 // Never send the email itself back; only whether the report is unlocked.
@@ -26,12 +27,15 @@ async function standing(v: Row, coach = false) {
   const me = { age: v.age, sex: v.sex as Sex, scores: v.scores || {} };
   if ((!v.email && !coach) || !isFull(me)) return null;
   const b = bracketOf(v.age), br = BRACKETS.find((x) => x[0] === b)!;
-  const { data } = await db().from("visitors").select("id, name, age, sex, opt_in, scores").eq("sex", v.sex).gte("age", br[2]).lte("age", br[3]);
-  const field = (data ?? []).map((x) => ({ ...x, s: combine({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }), full: isFull({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }) }))
+  // Ranked against people tested the same day (Vegas time) as this visitor.
+  const myDay = ptDay(v.created_at);
+  const { data } = await db().from("visitors").select("id, name, age, sex, opt_in, scores, created_at").eq("sex", v.sex).gte("age", br[2]).lte("age", br[3]);
+  const field = (data ?? []).filter((x) => ptDay(x.created_at) === myDay).map((x) => ({ ...x, s: combine({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }), full: isFull({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }) }))
     .filter((x) => x.full).sort((a, c) => c.s - a.s);
   const rank = field.findIndex((x) => x.id === v.id) + 1;
   return {
     group: `${v.sex === "F" ? "Women" : "Men"}, ${br[1]}`, rank, total: field.length, score: combine(me),
+    day: dayLong(myDay), isToday: myDay === ptDay(),
     top: field.slice(0, 2).map((x, i) => ({ rank: i + 1, name: x.id === v.id || x.opt_in ? displayName(x.name) : "Hidden", score: x.s, me: x.id === v.id })),
   };
 }

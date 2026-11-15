@@ -747,3 +747,10 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .lbin input { width: 110px; min-height: 48px; text-align: right; font-family: var(--display); font-weight: 800; font-size: 26px; padding: 0 12px; }
 .lbin span { font-weight: 700; color: var(--ink-2); }
 .wv-later { margin: 6px 0 0; font-size: 16px; line-height: 1.45; color: #B2EBF0; }
+
+/* Board day switcher (sits beside the tally) */
+.b-right { display: flex; align-items: center; gap: 1.6cqw; }
+.b-days { display: grid; grid-template-columns: repeat(2, auto); gap: 0.7cqh 0.5cqw; }
+.b-days button { font: inherit; font-weight: 900; font-size: 1.35cqh; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.7cqh 1cqw; border-radius: 99px; border: 0.2cqh solid rgba(244, 242, 236, 0.35); background: transparent; color: #F4F2EC; cursor: pointer; white-space: nowrap; }
+.b-days button[aria-pressed="true"] { background: #F4F2EC; color: #0F4258; border-color: #F4F2EC; }
+.b-days button:last-child:nth-child(odd) { grid-column: 1 / -1; }

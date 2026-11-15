@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { dayChip, dayLong } from "@/lib/days";
 
 type Entry = { id: string; name: string; d: string; u: string };
-type Profile = { id: string; name: string; group: string; tests: { t: string; name: string; d: string; u: string; tier: string; tierLabel: string }[]; combine: number | null; standing: { rank: number; total: number } | null; club: boolean };
-type Data = { count: number; views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]>; club: string[]; people: Profile[] };
+type Profile = { id: string; name: string; group: string; tests: { t: string; name: string; d: string; u: string; tier: string; tierLabel: string }[]; combine: number | null; standing: { rank: number; total: number } | null; club: boolean; day: string };
+type Data = { day: string; today: string; days: string[]; count: number; views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]>; club: string[]; people: Profile[] };
 const VIEWS: [string, string][] = [["overall", "Combine Score"], ["grip", "Grip"], ["balance", "Balance"], ["squat", "Squat hold"], ["pushups", "Push-ups"], ["floor", "Floor rise"], ["club", "1:00 Club"]];
 const EXPLAIN: Record<string, string> = {
   overall: "All five tests. Each scores up to 100 against people your age and sex. Max 500.",
@@ -48,15 +49,16 @@ export default function Board() {
   const [find, setFind] = useState("");
   const [prog, setProg] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [day, setDay] = useState<string | null>(null); // null = today (the server picks it)
   const idleAt = useRef(0), t0 = useRef(0);
 
-  const load = useCallback(() => fetch("/api/board", { cache: "no-store" }).then((r) => r.ok && r.json()).then((j) => j && setData(j)).catch(() => {}), []);
+  const load = useCallback(() => fetch(`/api/board${day ? `?day=${day}` : ""}`, { cache: "no-store" }).then((r) => r.ok && r.json()).then((j) => j && setData(j)).catch(() => {}), [day]);
   useEffect(() => { load(); const h = setInterval(load, POLL_MS); return () => clearInterval(h); }, [load]);
   useEffect(() => {
     t0.current = performance.now();
     const h = setInterval(() => {
       const now = performance.now();
-      if (!auto) { if (now - idleAt.current > IDLE_MS) { setAuto(true); setFind(""); setOpenId(null); t0.current = now; } setProg(0); return; }
+      if (!auto) { if (now - idleAt.current > IDLE_MS) { setAuto(true); setFind(""); setOpenId(null); setDay(null); t0.current = now; } setProg(0); return; }
       const f = (now - t0.current) / ROTATE_MS; setProg(Math.min(1, f));
       if (f >= 1) { t0.current = now; setView((v) => VIEWS[(VIEWS.findIndex((x) => x[0] === v) + 1) % VIEWS.length][0]); }
     }, 120);
@@ -78,7 +80,10 @@ export default function Board() {
           <div className="b-top">
             <div className="lockup"><span className="l1">Longevity</span><span className="l2"><svg className="sw" viewBox="0 0 60 16" aria-hidden="true"><path d="M4 5 H58 M14 11 H58" /></svg><span>Combine</span><svg className="sw flip" viewBox="0 0 60 16" aria-hidden="true"><path d="M4 5 H58 M14 11 H58" /></svg></span><svg className="spark s1" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg><svg className="spark s2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg></div>
             <div className="v-title"><span className="rib">{VIEWS.find((v) => v[0] === view)![1]}</span><span className="exp">{EXPLAIN[view]}</span></div>
-            <div className="tally"><span className="n num">{data?.count ?? "–"}</span><span className="l">Tested today</span></div>
+            <div className="b-right">
+              <div className="tally"><span className="n num">{data?.count ?? "–"}</span><span className="l">{!data || data.day === data.today ? "Tested today" : data.day === "all" ? "Tested so far" : `Tested ${dayChip(data.day).split(" ")[0]}`}</span></div>
+              <nav className="b-days" aria-label="Day">{[...(data?.days ?? []), "all"].map((d) => <button key={d} type="button" aria-pressed={(data?.day ?? "") === d} onClick={() => setDay(d === data?.today ? null : d)}>{d === "all" ? "All days" : d === data?.today ? "Today" : dayChip(d)}</button>)}</nav>
+            </div>
           </div>
           {view === "club"
             ? <div className="club"><div className="club-badge"><span className="t">1:00</span><span className="s">Club</span></div>
@@ -98,8 +103,8 @@ export default function Board() {
         {open && <div className="b-scrim" onClick={() => setOpenId(null)} />}
         <aside className={`b-panel ${open ? "on" : ""}`} aria-hidden={!open}>{open && <>
           <button type="button" className="b-x" onClick={() => setOpenId(null)} aria-label="Close">×</button>
-          <span className="pk">{open.group}</span><h2>{open.name}</h2>
-          {open.combine != null && <div className="pc"><span className="v num">{open.combine}</span><span>Combine Score{open.standing ? <><br /><b>#{open.standing.rank}</b> of {open.standing.total} in {open.group.toLowerCase()}</> : null}</span></div>}
+          <span className="pk">{open.group} · {dayLong(open.day)}</span><h2>{open.name}</h2>
+          {open.combine != null && <div className="pc"><span className="v num">{open.combine}</span><span>Combine Score{open.standing ? <><br /><b>#{open.standing.rank}</b> of {open.standing.total} in {open.group.toLowerCase()} on {dayLong(open.day).split(",")[0]}</> : null}</span></div>}
           {open.club && <span className="pclub">1:00 Club</span>}
           <div className="pt">{open.tests.map((x) => <div key={x.t} className="prow"><span className="pn">{x.name}</span><span className="pv num">{x.d}<small>{x.u}</small></span><span className={`ptier ${x.tier}`}>{x.tierLabel}</span></div>)}</div>
           {open.combine == null && <p className="pnote">Finish all five tests to get a Combine Score and a spot on the Combine board.</p>}
