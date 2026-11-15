@@ -21,12 +21,14 @@ function Card({ title, unit, how, children, note }: { title: string; unit?: stri
   );
 }
 
-export default function Sheet() {
+/** /sheet prints the full-color version; /sheet?ink=low drops the solid header for home printers. */
+export default async function Sheet({ searchParams }: { searchParams: Promise<{ ink?: string }> }) {
+  const low = (await searchParams).ink === "low";
   return (
-    <main className="bm">
+    <main className={`bm${low ? " low" : ""}`}>
       <style>{CSS}</style>
       <header>
-        <div className="brand"><img src="/logo-cream.png" alt="groove" /><span>Longevity Combine · HLTH 2026</span></div>
+        <div className="brand"><img src={low ? "/logo-teal.png" : "/logo-cream.png"} alt="groove" /><span>Longevity Combine · HLTH 2026</span></div>
         <h1>How do you compare?</h1>
         <p>Find your age row. Each number is <b>typical</b> for your age: half of people score above it, half below.</p>
       </header>
@@ -112,4 +114,15 @@ html, body { background: #FFFFFF !important; margin: 0; }
 .bm footer { padding: 14px 48px 24px; font-size: 10px; line-height: 1.5; color: rgba(0,0,0,0.6); }
 .bm footer p { margin: 0 0 4px; }
 @media screen { body { background: #F4F6F7 !important; } .bm { margin: 24px auto; background: #FFFFFF; box-shadow: 0 2px 16px rgba(0,0,0,0.08); } }
+
+/* Low-ink: no solid fills, teal type on white */
+.bm.low header { background: #FFFFFF; color: #0F4258; padding-bottom: 20px; border-bottom: 3px solid #0F4258; margin: 0 48px; padding-left: 0; padding-right: 0; }
+.bm.low .brand { color: #3F6B7A; }
+.bm.low .brand span { border-left-color: #CBD3D6; }
+.bm.low h1 { color: #0F4258; }
+.bm.low header p { color: rgba(0,0,0,0.75); }
+.bm.low .pill.strong { background: #FFFFFF; color: #0F4258; box-shadow: inset 0 0 0 1.5px #0F4258; }
+.bm.low .pill.elite { background: #FFFFFF; color: #8A5A00; box-shadow: inset 0 0 0 1.5px #E0A800; }
+.bm.low .pill.building { background: #FFFFFF; color: #6B4A16; box-shadow: inset 0 0 0 1.5px #D9C4A3; }
+.bm.low .pill.solid { background: #FFFFFF; color: #0F4258; box-shadow: inset 0 0 0 1.5px #A9D8DD; }
 `;
