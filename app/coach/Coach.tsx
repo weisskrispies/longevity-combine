@@ -172,11 +172,8 @@ function WaiverModal({ forName, visitorId, onClose, onSigned, show }: { forName?
         <div className="wv-text" tabIndex={0} role="document" aria-label="Release and waiver text">{WAIVER.text.split(/\n\n+/).map((para, i) => { const m = i > 1 ? para.match(/^([A-Z][A-Za-z ]{2,40}(?:\.|:)) ([\s\S]*)$/) : null; return <p key={i}>{m ? <><b>{m[1]}</b> {m[2]}</> : para}</p>; })}</div>
         <div className="wv-form">
           <div className="field"><label htmlFor="wv-name">Type your full name</label><input className="input wv-name" id="wv-name" autoComplete="off" autoCapitalize="words" autoCorrect="off" spellCheck={false} enterKeyHint="done" placeholder={forName?.includes(" ") ? forName : "First and last name"} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="field"><label htmlFor="wv-email">Email <span className="wv-sub">for your results</span></label><input className="input wv-email" id="wv-email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={!emailValid} /></div>
           {box("wv-agree", agreed, setAgreed, <b>I have read and agree to the release</b>, true)}
-          <p className="wv-opt">Optional</p>
-          {box("wv-lb", lb, setLb, "Show my first name and scores on the booth leaderboard")}
-          {box("wv-give", give, setGive, <>Enter to win a speaker{give && !em ? <span className="wv-need"> Add your email above.</span> : null}</>)}
+          <p className="wv-later">The leaderboard, speaker giveaway and emailed results are optional. We&rsquo;ll ask at the end.</p>
         </div>
       </div>
       <div className="s-foot wv-foot"><button className="wv-skip" onClick={onClose}>Skip for now</button><button className="btn gold wv-go" disabled={!ok || busy} onClick={submit}>{busy ? "Saving…" : "Sign"}</button></div>
@@ -318,7 +315,7 @@ function ResultsStep({ v, onEdit, onClose, onEmail, onOptIn }: { v: Visitor; onE
   };
   const optRow = (k: "lb" | "give" | "mail", label: string) => ask[k] && (k !== "lb" || !v.opt_in) && (k !== "give" || !v.giveaway) && (k !== "mail" || !(v.email_results ?? false))
     ? <label key={k} className="wv-check sm" htmlFor={`oi-${k}`}><input type="checkbox" id={`oi-${k}`} checked={o[k]} onChange={(e) => setO((x) => ({ ...x, [k]: e.target.checked }))} /><span>{label}</span></label> : null;
-  const rows = [optRow("give", "Opt in to win a speaker"), optRow("mail", "Opt in to get my results")].filter(Boolean);
+  const rows = [optRow("lb", "Show my first name and scores on the booth leaderboard"), optRow("give", "Enter to win a speaker"), optRow("mail", "Email me my results")].filter(Boolean);
   const url = `${SITE}/r/${v.code}`;
   useEffect(() => { QRCode.toDataURL(url, { width: 480, margin: 1, color: { dark: "#0F4258", light: "#FFFFFF" } }).then(setQr); }, [url]);
   useEffect(() => { if (v.email && v.email_results !== false) onEmail(v.email, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps

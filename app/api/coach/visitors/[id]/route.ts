@@ -28,5 +28,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (error && /emailed_at|email_results/.test(error.message)) { delete patch.email_results; ({ data, error } = await sel("id, code, name, age, sex, scores, email")); }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (data && patch.email && data.email && b.send_results !== false) await sendReportEmail({ ...data, email: data.email });
+  // Opt-ins given at the end also go on their signed waiver, so the consent record stays in one place.
+  const consent = { ...(b.opt_in === true ? { consent_leaderboard: true } : {}), ...(b.giveaway === true ? { consent_giveaway: true } : {}), ...(b.email_results === true ? { consent_email: true } : {}) };
+  if (Object.keys(consent).length) {
+    const w = await db().from("visitors").select("waiver_id").eq("id", id).single();
+    if (!w.error && w.data?.waiver_id) await db().from("waivers").update(consent).eq("id", w.data.waiver_id);
+  }
   return NextResponse.json({ visitor: data });
 }

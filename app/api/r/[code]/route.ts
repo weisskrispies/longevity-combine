@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, emailOk } from "@/lib/server";
+import { db, emailOk, isCoach } from "@/lib/server";
 import { sendReportEmail } from "@/lib/email";
 import { BRACKETS, bracketOf, combine, displayName, isFull, type Sex } from "@/lib/norms";
 
@@ -16,15 +16,15 @@ async function load(code: string): Promise<Row | null> {
   return r2.data as Row | null;
 }
 // Never send the email itself back; only whether the report is unlocked.
-const shape = (v: Row) => ({
+const shape = (v: Row, coach = false) => ({
   first: v.name.split(" ")[0], name: displayName(v.name), age: v.age, sex: v.sex, aspire: v.aspire, aspire_text: v.aspire_text,
-  role: v.role, company: v.company, interest: v.interest, unlocked: !!v.email, scores: v.email ? v.scores : null,
+  role: v.role, company: v.company, interest: v.interest, unlocked: !!v.email || coach, scores: v.email || coach ? v.scores : null,
 });
 
 /** Their spot on the board: top 2 in their age group and sex, plus their own rank. Full-five finishers only. */
-async function standing(v: Row) {
+async function standing(v: Row, coach = false) {
   const me = { age: v.age, sex: v.sex as Sex, scores: v.scores || {} };
-  if (!v.email || !isFull(me)) return null;
+  if ((!v.email && !coach) || !isFull(me)) return null;
   const b = bracketOf(v.age), br = BRACKETS.find((x) => x[0] === b)!;
   const { data } = await db().from("visitors").select("id, name, age, sex, opt_in, scores").eq("sex", v.sex).gte("age", br[2]).lte("age", br[3]);
   const field = (data ?? []).map((x) => ({ ...x, s: combine({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }), full: isFull({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }) }))
@@ -39,7 +39,9 @@ async function standing(v: Row) {
 export async function GET(_req: Request, ctx: { params: Promise<{ code: string }> }) {
   const v = await load((await ctx.params).code);
   if (!v) return NextResponse.json({ error: "We couldn't find that report." }, { status: 404 });
-  return NextResponse.json({ ...shape(v), standing: await standing(v) });
+  // A signed-in coach iPad opens the report directly; people scanning the QR on their own phone unlock with email.
+  const coach = await isCoach();
+  return NextResponse.json({ ...shape(v, coach), standing: await standing(v, coach) });
 }
 
 /** Unlock with email (body.email), or record interest (body.interest). */
