@@ -35,6 +35,9 @@ function Copy({ text, label }: { text: string; label: string }) {
   return <button className="copy2" onClick={() => { navigator.clipboard?.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 1500); }, () => {}); }}>{done ? "Copied" : label}</button>;
 }
 
+/** "Open their report" from the coach app adds ?from=coach; a QR scan never does, so it keeps the email step. */
+const fromCoach = () => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "coach" ? "?from=coach" : "");
+
 export default function Report({ code }: { code: string }) {
   const [d, setD] = useState<Data | null>(null);
   const [err, setErr] = useState("");
@@ -42,10 +45,10 @@ export default function Report({ code }: { code: string }) {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!d?.standing) return;
-    const h = setInterval(() => { if (document.visibilityState === "visible") fetch(`/api/r/${code}`, { cache: "no-store" }).then((r) => r.ok && r.json()).then((j) => j && setD(j)).catch(() => {}); }, 30000);
+    const h = setInterval(() => { if (document.visibilityState === "visible") fetch(`/api/r/${code}${fromCoach()}`, { cache: "no-store" }).then((r) => r.ok && r.json()).then((j) => j && setD(j)).catch(() => {}); }, 30000);
     return () => clearInterval(h);
   }, [code, !!d?.standing]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { fetch(`/api/r/${code}`, { cache: "no-store" }).then(async (r) => { const j = await r.json(); if (r.ok) setD(j); else setErr(j.error); }).catch(() => setErr("Couldn't load your report. Check your connection and refresh.")); }, [code]);
+  useEffect(() => { fetch(`/api/r/${code}${fromCoach()}`, { cache: "no-store" }).then(async (r) => { const j = await r.json(); if (r.ok) setD(j); else setErr(j.error); }).catch(() => setErr("Couldn't load your report. Check your connection and refresh.")); }, [code]);
 
   const top = <div className="rp-top"><Logo /><span className="meta">Longevity Combine · HLTH 2026</span></div>;
   if (err) return <div className="rp-gate gutter">{top}<div className="gate2"><PanelLines /><h1>{err}</h1><p>Ask anyone in a Groove jacket at the booth and we'll find it.</p></div></div>;

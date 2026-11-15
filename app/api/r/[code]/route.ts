@@ -36,11 +36,11 @@ async function standing(v: Row, coach = false) {
   };
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ code: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ code: string }> }) {
   const v = await load((await ctx.params).code);
   if (!v) return NextResponse.json({ error: "We couldn't find that report." }, { status: 404 });
   // A signed-in coach iPad opens the report directly; people scanning the QR on their own phone unlock with email.
-  const coach = await isCoach();
+  const coach = new URL(req.url).searchParams.get("from") === "coach" && (await isCoach()); // needs both: the coach link and a signed-in coach device
   return NextResponse.json({ ...shape(v, coach), standing: await standing(v, coach) });
 }
 

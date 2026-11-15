@@ -331,7 +331,7 @@ function ResultsStep({ v, onEdit, onClose, onEmail, onOptIn }: { v: Visitor; onE
           <div className="panel">
             <div className="share"><div className="qr">{qr && <img src={qr} alt={`QR code for ${v.name}'s report`} />}</div>
               <div className="txt"><h3>Scan for your full report</h3><p className="small muted">This code is unique to {v.name.split(" ")[0]}. An email entered on their phone links back to this visit.</p>
-                <a className="textlink" href={`/r/${v.code}`} target="_blank" rel="noopener">Open their report</a></div></div>
+                <a className="textlink" href={`/r/${v.code}?from=coach`} target="_blank" rel="noopener">Open their report</a></div></div>
             {rows.length ? <div className="optin"><p className="or">Want in?</p>{rows}
                 {needEmail && <input className="input" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" aria-label="Their email" placeholder="Their email" value={email} onChange={(e) => setEmail(e.target.value)} />}
                 <button className="btn" disabled={!okOpt} onClick={saveOpt}>Save</button></div>
