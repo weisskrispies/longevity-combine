@@ -41,12 +41,12 @@ const PUSH: [number, number, [number, number, number], [number, number, number]]
 
 /**
  * Floor rise (sitting-rising test, 0-10). Age curve built to match the published facts:
- * a 10 is most common in men 16-25 and women 16-40, and under 8% of adults over 55 score 10
+ * a 10 is the most common single score (the mode, not the median) in men 16-25 and women 16-40, and under 8% of adults over 55 score 10
  * (Araujo 2020, 6,141 adults); about 70% of adults 60 and under score 8-10, and over half
  * of 76-80 year-olds score 0-3 (Brito 2012). Tiers use the mortality risk bands instead.
  */
 const FLOOR: [number, number, Anchors, Anchors][] = [ // men, women
-  [0, 25, [7, 9, 10, 10, 10], [7, 9, 10, 10, 10]], [26, 40, [6.5, 8.5, 9.5, 10, 10], [7, 9, 10, 10, 10]],
+  [0, 25, [6, 8, 9.5, 10, 10], [6, 8, 9.5, 10, 10]], [26, 40, [5, 7, 9, 9.5, 10], [5, 7, 9, 10, 10]],
   [41, 55, [5, 7.5, 8.5, 9.5, 10], [4.5, 7, 8.5, 9.5, 10]], [56, 60, [4, 7, 8, 9, 9.5], [3.5, 6.5, 7.5, 8.5, 9.5]],
   [61, 70, [2.5, 5, 6.5, 8, 9.5], [2, 4.5, 6, 7.5, 9]], [71, 75, [1, 3.5, 5, 6.5, 8.5], [0.5, 3, 4.5, 6, 8]],
   [76, 120, [0, 1.5, 3, 5, 7.5], [0, 1, 2.5, 4.5, 7]],
@@ -108,6 +108,7 @@ export function percentile(t: TestId, age: number, sex: Sex, raw: number | null 
 }
 function pctFromNorms(t: TestId, age: number, sex: Sex, raw: number, eo?: boolean): number {
   if (raw <= 0) return 1;
+  if (!(t === "balance" && eo) && raw >= TESTS[t].max) return 99; // maxed the test: top score
   const an = anchorsFor(keyOf(t, eo), age, sex), xs = [0, ...an], ys = [0, ...PCTS];
   let p = 0;
   if (raw >= an[4]) {

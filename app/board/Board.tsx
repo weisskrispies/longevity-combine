@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { dayChip, dayLong } from "@/lib/days";
 
 type Entry = { id: string; name: string; d: string; u: string };
-type Profile = { id: string; name: string; group: string; tests: { t: string; name: string; d: string; u: string; tier: string; tierLabel: string }[]; combine: number | null; standing: { rank: number; total: number } | null; club: boolean; day: string };
+type Profile = { id: string; name: string; group: string; tests: { t: string; name: string; d: string; u: string; tier: string; tierLabel: string; pts: number | null; }[]; combine: number | null; standing: { rank: number; total: number } | null; club: boolean; day: string };
 const TALLY_MIN = 10; // hide the "Tested today" badge until the day has this many
 type Data = { day: string; today: string; days: string[]; count: number; views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]>; club: string[]; people: Profile[] };
 const VIEWS: [string, string][] = [["overall", "Combine Score"], ["grip", "Grip"], ["balance", "Balance"], ["squat", "Squat hold"], ["pushups", "Push-ups"], ["floor", "Floor rise"], ["club", "1:00 Club"]];
@@ -135,7 +135,7 @@ export default function Board() {
           <span className="pk">{open.group} · {dayLong(open.day)}</span><h2>{open.name}</h2>
           {open.combine != null && <div className="pc"><span className="v num">{open.combine}</span><span>Combine Score{open.standing ? <><br /><b>#{open.standing.rank}</b> of {open.standing.total} in {open.group.toLowerCase()} on {dayLong(open.day).split(",")[0]}</> : null}</span></div>}
           {open.club && <span className="pclub">1:00 Club</span>}
-          <div className="pt">{open.tests.map((x) => <div key={x.t} className="prow"><span className="pn">{x.name}</span><span className="pv num">{x.d}<small>{x.u}</small></span><span className={`ptier ${x.tier}`}>{x.tierLabel}</span></div>)}</div>
+          <div className="pt">{open.tests.map((x) => <div key={x.t} className="prow"><span className="pn">{x.name}</span><span className="pv num">{x.d}<small>{x.u}</small></span><span className="ppts num">{x.pts ?? "–"}<small>pts</small></span><span className={`ptier ${x.tier}`}>{x.tierLabel}</span></div>)}{open.combine != null && <div className="prow ptotal"><span className="pn">Combine Score <small>(points added up)</small></span><span /><span className="ppts num">{open.combine}</span><span /></div>}</div>
           {open.combine == null && <p className="pnote">Finish all five tests to get a Combine Score and a spot on the Combine board.</p>}
         </>}</aside>
         {fsMsg && <div className="b-fsmsg" onClick={() => setFsMsg("")}>{fsMsg}</div>}
