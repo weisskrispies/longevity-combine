@@ -64,7 +64,12 @@ export default function Board() {
     }, 120);
     return () => clearInterval(h);
   }, [auto]);
-  const touch = () => { setAuto(false); idleAt.current = performance.now(); };
+  const touch = () => {
+    setAuto(false); idleAt.current = performance.now();
+    // First tap takes the board full screen (hides Chrome's bars) and keeps the display awake.
+    if (typeof document !== "undefined" && !document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    (navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<unknown> } }).wakeLock?.request("screen").catch(() => {});
+  };
   const q = find.trim().toLowerCase();
   const matches = q ? (data?.people ?? []).filter((m) => m.name.toLowerCase().includes(q)).slice(0, 6) : [];
   const open = openId ? data?.people.find((m) => m.id === openId) : null;
