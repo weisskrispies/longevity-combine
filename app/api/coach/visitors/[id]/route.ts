@@ -13,6 +13,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (b.scores && typeof b.scores === "object") {
     const s: Record<string, number> = {};
     for (const t of ORDER) { const v = b.scores[t]; if (typeof v === "number" && isFinite(v)) s[t] = clampScore(t as TestId, v); }
+    if (b.scores.balance_eo) s.balance_eo = 1; // eyes open
+    const lb = b.scores.grip_lb; if (typeof lb === "number" && isFinite(lb) && lb > 0) s.grip_lb = Math.min(250, Math.round(lb * 2) / 2);
     patch.scores = s;
   }
   if ("floor_detail" in b) patch.floor_detail = b.floor_detail ?? null;

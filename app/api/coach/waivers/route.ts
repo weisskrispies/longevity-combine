@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (typeof b.visitor_id === "string") {
     const { data: v } = await db().from("visitors").select("id, email").eq("id", b.visitor_id).single();
     if (v) {
-      await db().from("visitors").update({ waiver_id: w.id, opt_in: w.consent_leaderboard, email_results: w.consent_email, ...(w.consent_giveaway ? { giveaway: true } : {}), ...(email && !v.email ? { email, email_source: "waiver" } : {}) }).eq("id", v.id);
+      await db().from("visitors").update({ waiver_id: w.id, email_results: w.consent_email, ...(w.consent_giveaway ? { giveaway: true } : {}), ...(email && !v.email ? { email, email_source: "waiver" } : {}) }).eq("id", v.id);
       await db().from("waivers").update({ visitor_id: v.id }).eq("id", w.id);
     }
   }

@@ -186,7 +186,7 @@ const YEAR = new Date().getFullYear();
 
 function VisitorStep({ pre, onClose, onCreated, show }: { pre: Pre | null; onClose: () => void; onCreated: (v: Visitor) => void; show: (m: string) => void }) {
   const [waiver, setWaiver] = useState<Signed | null>(null), [wOpen, setWOpen] = useState(true);
-  const [d, setD] = useState({ first: "", last: "", by: "", sex: pre?.sex || "", opt_in: false, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
+  const [d, setD] = useState({ first: "", last: "", by: "", sex: pre?.sex || "", opt_in: true, giveaway: false, email: "", aspire: [] as string[], aspire_text: "", role: "" });
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: unknown) => setD((x) => ({ ...x, [k]: v }));
   const by = Number(d.by), age = d.by.length === 4 ? YEAR - by : 0, ok = d.first.trim() && age >= 18 && age <= 105 && d.sex && (!d.giveaway || emailOk(d.email));
@@ -236,7 +236,7 @@ function VisitorStep({ pre, onClose, onCreated, show }: { pre: Pre | null; onClo
       <div className="s-foot"><button className="btn secondary" onClick={onClose}>Cancel</button><button className="btn" disabled={!ok || busy} onClick={submit}>{busy ? "Saving…" : "Start testing"}</button></div>
       {wOpen && <WaiverModal forName={`${d.first} ${d.last}`.trim()} onClose={() => setWOpen(false)} show={show} onSigned={(w) => {
         setWaiver(w); setWOpen(false);
-        setD((x) => ({ ...x, opt_in: w.consent_leaderboard, giveaway: !!w.consent_giveaway, ...(!x.first.trim() ? { first: w.signed_name.split(" ")[0], last: w.signed_name.split(" ").slice(1).join(" ") } : {}), ...(w.email && !x.email ? { email: w.email } : {}) }));
+        setD((x) => ({ ...x, giveaway: !!w.consent_giveaway, ...(!x.first.trim() ? { first: w.signed_name.split(" ")[0], last: w.signed_name.split(" ").slice(1).join(" ") } : {}), ...(w.email && !x.email ? { email: w.email } : {}) }));
         show("Signed. Thanks! Please hand the iPad back.");
       }} />}
     </div>
@@ -315,7 +315,7 @@ function ResultsStep({ v, onEdit, onClose, onEmail, onOptIn }: { v: Visitor; onE
   };
   const optRow = (k: "lb" | "give" | "mail", label: string) => ask[k] && (k !== "lb" || !v.opt_in) && (k !== "give" || !v.giveaway) && (k !== "mail" || !(v.email_results ?? false))
     ? <label key={k} className="wv-check sm" htmlFor={`oi-${k}`}><input type="checkbox" id={`oi-${k}`} checked={o[k]} onChange={(e) => setO((x) => ({ ...x, [k]: e.target.checked }))} /><span>{label}</span></label> : null;
-  const rows = [optRow("lb", "Show my first name and scores on the booth leaderboard"), optRow("give", "Enter to win a speaker"), optRow("mail", "Email me my results")].filter(Boolean);
+  const rows = [optRow("give", "Enter to win a speaker"), optRow("mail", "Email me my results")].filter(Boolean);
   const url = `${SITE}/r/${v.code}`;
   useEffect(() => { QRCode.toDataURL(url, { width: 480, margin: 1, color: { dark: "#0F4258", light: "#FFFFFF" } }).then(setQr); }, [url]);
   useEffect(() => { if (v.email && v.email_results !== false) onEmail(v.email, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -332,6 +332,7 @@ function ResultsStep({ v, onEdit, onClose, onEmail, onOptIn }: { v: Visitor; onE
             <div className="share"><div className="qr">{qr && <img src={qr} alt={`QR code for ${v.name}'s report`} />}</div>
               <div className="txt"><h3>Scan for your full report</h3><p className="small muted">This code is unique to {v.name.split(" ")[0]}. An email entered on their phone links back to this visit.</p>
                 <a className="textlink" href={`/r/${v.code}?from=coach`} target="_blank" rel="noopener">Open their report</a></div></div>
+            <label className="wv-check sm lb-show" htmlFor="oi-show"><input type="checkbox" id="oi-show" checked={v.opt_in} onChange={(e) => onOptIn({ opt_in: e.target.checked, send_results: false })} /><span>Show {v.name.split(" ")[0]} on the leaderboard (first name only)</span></label>
             {rows.length ? <div className="optin"><p className="or">Want in?</p>{rows}
                 {needEmail && <input className="input" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" aria-label="Their email" placeholder="Their email" value={email} onChange={(e) => setEmail(e.target.value)} />}
                 <button className="btn" disabled={!okOpt} onClick={saveOpt}>Save</button></div>

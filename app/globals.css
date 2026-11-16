@@ -778,3 +778,4 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .retest .rt-txt b { display: block; font-size: 18px; line-height: 1.3; }
 @media (max-width: 520px) { .retest { gap: 14px; padding: 16px; } .retest .cal { width: 58px; } .retest .cal .dd { font-size: 26px; } }
 .path .copy2 { background: transparent; color: var(--ink); border: 2px solid rgba(178, 235, 240, 0.45); min-height: 48px; font-size: 16px; padding: 0 20px; }
+.lb-show { margin-top: 14px; }
