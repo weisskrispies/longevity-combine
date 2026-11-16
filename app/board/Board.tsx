@@ -42,6 +42,14 @@ const Flourish = () => (
   </svg>
 );
 
+type WakeNav = Navigator & { wakeLock?: { request: (t: "screen") => Promise<{ released: boolean }> } };
+let lock: { released: boolean } | null = null;
+/** Ask the browser to keep the screen on while the board is visible. */
+function keepAwake() {
+  if (lock && !lock.released) return;
+  (navigator as WakeNav).wakeLock?.request("screen").then((l) => { lock = l; }).catch(() => {});
+}
+
 export default function Board() {
   const [data, setData] = useState<Data | null>(null);
   const [view, setView] = useState("overall");
@@ -64,12 +72,18 @@ export default function Board() {
     }, 120);
     return () => clearInterval(h);
   }, [auto]);
-  const touch = () => {
-    setAuto(false); idleAt.current = performance.now();
-    // First tap takes the board full screen (hides Chrome's bars) and keeps the display awake.
-    if (typeof document !== "undefined" && !document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
-    (navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<unknown> } }).wakeLock?.request("screen").catch(() => {});
+  const touch = () => { setAuto(false); idleAt.current = performance.now(); };
+  // Full screen and keep-awake need a completed tap (touchend/click), not touchstart, so they run on click.
+  const goFull = () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+    keepAwake();
   };
+  useEffect(() => {
+    keepAwake();
+    const v = () => { if (document.visibilityState === "visible") keepAwake(); };
+    document.addEventListener("visibilitychange", v);
+    return () => document.removeEventListener("visibilitychange", v);
+  }, []);
   const q = find.trim().toLowerCase();
   const matches = q ? (data?.people ?? []).filter((m) => m.name.toLowerCase().includes(q)).slice(0, 6) : [];
   const open = openId ? data?.people.find((m) => m.id === openId) : null;
@@ -78,7 +92,7 @@ export default function Board() {
     : <div key={i} className="slot open"><span className="rk">{i + 1}</span><span className="nm">Open spot</span><span /></div>;
 
   return (
-    <section className="b-shell kiosk" onPointerDown={touch}>
+    <section className="b-shell kiosk" onPointerDown={touch} onClick={goFull}>
       <div className="stage" id="stage">
         <div className="field-bg"><Deco /><Flourish /></div>
         <div className="b-grid">
