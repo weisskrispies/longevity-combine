@@ -82,6 +82,12 @@ export default function Coach() {
 
   const open = (v: Visitor) => { setCur(v); setMode("results"); };
   const close = () => { setMode("home"); setCur(null); setPre(null); refresh(); };
+  const remove = async (v: Visitor) => {
+    const qq = loadQ(); delete qq[v.id]; saveQ(qq); setPending(Object.keys(qq).length);
+    const r = await fetch(`/api/coach/visitors/${v.id}`, { method: "DELETE" }).catch(() => null);
+    if (!r || !r.ok) { show("Couldn't delete. Check the connection and try again."); return; }
+    setList((l) => l.filter((x) => x.id !== v.id)); show(`Deleted ${v.name}.`); close();
+  };
 
   return (
     <>
@@ -126,7 +132,7 @@ export default function Coach() {
             const v2 = pre?.grip != null ? { ...v, scores: { ...v.scores, grip: pre.grip } } : v;
             setCur(v2); if (v2 !== v) queuePatch(v2, { scores: v2.scores }); setPre(null); setMode("scores");
           }} />}
-          {mode === "scores" && cur && <ScoresStep v={cur} onRename={(name) => { const v = { ...cur, name }; setCur(v); setList((l) => l.map((x) => (x.id === v.id ? v : x))); queuePatch(v, { name }); show("Name saved."); }} onSign={() => setWv(true)} onScores={updateScores} onClose={() => { show("Saved. Search their name to pick up where you left off."); close(); }} onNext={() => setMode("results")} />}
+          {mode === "scores" && cur && <ScoresStep v={cur} onDelete={() => remove(cur)} onRename={(name) => { const v = { ...cur, name }; setCur(v); setList((l) => l.map((x) => (x.id === v.id ? v : x))); queuePatch(v, { name }); show("Name saved."); }} onSign={() => setWv(true)} onScores={updateScores} onClose={() => { show("Saved. Search their name to pick up where you left off."); close(); }} onNext={() => setMode("results")} />}
           {mode === "results" && cur && <ResultsStep v={cur} onEdit={() => setMode("scores")} onClose={close} onEmail={(email, quiet) => { const v = { ...cur, email }; setCur(v); queuePatch(v, { email }); if (!quiet) show(`Saved. ${cur.name.split(" ")[0]}'s results are on their way to ${email}.`); }}
             onOptIn={(o) => { const v = { ...cur, ...o, email: o.email || cur.email }; setCur(v); queuePatch(v, o); show("Saved."); }} />}
           {wv && cur && <WaiverModal forName={cur.name} visitorId={cur.id} onClose={() => setWv(false)} show={show} onSigned={(w) => {
@@ -257,7 +263,8 @@ function NameEdit({ name, onSave }: { name: string; onSave: (n: string) => void 
     : <h2 className="s-title" id="s-title">{name} <button type="button" className="textlink name-btn" onClick={() => { setVal(name); setEd(true); }}>Edit name</button></h2>;
 }
 
-function ScoresStep({ v, onRename, onSign, onScores, onClose, onNext }: { v: Visitor; onRename: (name: string) => void; onSign: () => void; onScores: (s: Scores, f?: Floor | null) => void; onClose: () => void; onNext: () => void }) {
+function ScoresStep({ v, onDelete, onRename, onSign, onScores, onClose, onNext }: { v: Visitor; onDelete: () => void; onRename: (name: string) => void; onSign: () => void; onScores: (s: Scores, f?: Floor | null) => void; onClose: () => void; onNext: () => void }) {
+  const [delAsk, setDelAsk] = useState(false);
   const [raw, setRaw] = useState<Record<string, string>>(() => Object.fromEntries(ORDER.map((t) => [t, v.scores[t] != null ? String(v.scores[t]) : ""])));
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const fl: Floor = v.floor_detail || { dn: 0, dw: 0, un: 0, uw: 0 };
@@ -303,7 +310,9 @@ function ScoresStep({ v, onRename, onSign, onScores, onClose, onNext }: { v: Vis
             </div></div>
         </div>
       </div>
-      <div className="s-foot"><button className="btn secondary" onClick={onClose}>Save and close</button><button className="btn" disabled={!Object.keys(v.scores).length} onClick={onNext}>See results</button></div>
+      <div className="s-foot">{delAsk
+        ? <span className="del-ask">Delete {v.name} and all their scores? <button type="button" className="btn danger" onClick={onDelete}>Delete</button><button type="button" className="textlink" onClick={() => setDelAsk(false)}>Keep</button></span>
+        : <><button type="button" className="textlink del-link" onClick={() => setDelAsk(true)}>Delete person</button><button className="btn secondary" onClick={onClose}>Save and close</button><button className="btn" disabled={!Object.keys(v.scores).length} onClick={onNext}>See results</button></>}</div>
     </div>
   );
 }

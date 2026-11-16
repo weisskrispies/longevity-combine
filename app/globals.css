@@ -798,3 +798,7 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .lrow.open { cursor: default; border-style: dashed; background: rgba(6, 35, 48, 0.5); }
 .lrow.open .nm { color: rgba(178, 235, 240, 0.5); font-weight: 700; font-size: 2.6cqh; }
 .lrow.me { background: rgba(255, 202, 66, 0.2); }
+.b-fs[aria-pressed="true"] { background: #FFCA42; color: #0F4258; }
+.del-link { color: #B3261E; margin-right: auto; font-weight: 700; }
+.del-ask { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-weight: 700; margin-right: auto; }
+.btn.danger { background: #B3261E; color: #fff; border-color: #B3261E; }

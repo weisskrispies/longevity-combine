@@ -61,6 +61,9 @@ export default function Board() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null); // null = today (the server picks it)
   const idleAt = useRef(0), t0 = useRef(0);
+  const [paused, setPaused] = useState(false); // stays on the current tab until played again; remembered on this display
+  useEffect(() => { try { setPaused(localStorage.getItem("board-paused") === "1"); } catch {} }, []);
+  const togglePause = () => { const p = !paused; setPaused(p); try { localStorage.setItem("board-paused", p ? "1" : "0"); } catch {} };
 
   const load = useCallback(() => fetch(`/api/board${day ? `?day=${day}` : ""}`, { cache: "no-store" }).then((r) => r.ok && r.json()).then((j) => { if (!j) return; if (j.build && BUILD.v && j.build !== BUILD.v) { location.reload(); return; } BUILD.v ||= j.build; setData(j); }).catch(() => {}), [day]);
   useEffect(() => { load(); const h = setInterval(load, POLL_MS); return () => clearInterval(h); }, [load]);
@@ -69,11 +72,12 @@ export default function Board() {
     const h = setInterval(() => {
       const now = performance.now();
       if (!auto) { if (now - idleAt.current > IDLE_MS) { setAuto(true); setFind(""); setOpenId(null); setDay(null); t0.current = now; } setProg(0); return; }
+      if (paused) { setProg(0); t0.current = now; return; }
       const f = (now - t0.current) / ROTATE_MS; setProg(Math.min(1, f));
       if (f >= 1) { t0.current = now; setView((v) => VIEWS[(VIEWS.findIndex((x) => x[0] === v) + 1) % VIEWS.length][0]); }
     }, 120);
     return () => clearInterval(h);
-  }, [auto]);
+  }, [auto, paused]);
   const touch = () => { setAuto(false); idleAt.current = performance.now(); };
   // Full screen and keep-awake need a completed tap (touchend/click), not touchstart, so they run on click.
   const [isFull, setIsFull] = useState(false), [fsMsg, setFsMsg] = useState("");
@@ -131,6 +135,7 @@ export default function Board() {
               {q && <div className="b-results" role="listbox">{matches.length ? matches.map((m) => <button key={m.id} type="button" onClick={() => { setOpenId(m.id); setFind(""); }}><b>{m.name}</b><span>{m.group}</span></button>)
                 : <p>No one by that name yet. Only people who chose to show on the board appear here.</p>}</div>}
             </div>
+            <button type="button" className="b-fs" aria-pressed={paused} onClick={(e) => { e.stopPropagation(); togglePause(); }}>{paused ? "▶ Play" : "❚❚ Pause"}</button>
             {!isFull && <button type="button" className="b-fs" onClick={(e) => { e.stopPropagation(); goFull(true); }}>⤢ Full screen</button>}
             <img className="glogo" src="/logo-cream.png" alt="groove" />
           </div>

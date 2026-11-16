@@ -3,6 +3,15 @@ import { db, isCoach, emailOk } from "@/lib/server";
 import { ORDER, clampScore, type TestId } from "@/lib/norms";
 import { sendReportEmail } from "@/lib/email";
 
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  if (!(await isCoach())) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const { id } = await ctx.params;
+  // The signed waiver stays on file (its visitor link is cleared by the database).
+  const { error } = await db().from("visitors").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
+
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!(await isCoach())) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const { id } = await ctx.params;
