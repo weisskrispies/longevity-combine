@@ -758,3 +758,5 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 /* Kiosk: fill whatever space the display gives us (browser bars or full screen), no letterboxing */
 .kiosk { display: block; height: 100vh; height: 100dvh; overflow: hidden; }
 .kiosk .stage { width: 100vw; height: 100vh; height: 100dvh; aspect-ratio: auto; }
+.b-fs { font: inherit; font-weight: 900; font-size: 1.5cqh; padding: 1cqh 1.4cqw; border-radius: 99px; border: 0.2cqh solid #FFCA42; background: transparent; color: #FFCA42; cursor: pointer; white-space: nowrap; }
+.b-fsmsg { position: absolute; left: 50%; bottom: 10cqh; transform: translateX(-50%); background: #F4F2EC; color: #0F4258; font-weight: 700; font-size: 1.8cqh; padding: 1.4cqh 2cqw; border-radius: 1.2cqh; z-index: 20; max-width: 70cqw; }

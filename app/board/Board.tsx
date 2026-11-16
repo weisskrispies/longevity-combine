@@ -74,9 +74,17 @@ export default function Board() {
   }, [auto]);
   const touch = () => { setAuto(false); idleAt.current = performance.now(); };
   // Full screen and keep-awake need a completed tap (touchend/click), not touchstart, so they run on click.
-  const goFull = () => {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+  const [isFull, setIsFull] = useState(false), [fsMsg, setFsMsg] = useState("");
+  useEffect(() => { const f = () => setIsFull(!!document.fullscreenElement); document.addEventListener("fullscreenchange", f); return () => document.removeEventListener("fullscreenchange", f); }, []);
+  const goFull = (report = false) => {
     keepAwake();
+    if (document.fullscreenElement) return;
+    const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+    try {
+      if (el.requestFullscreen) el.requestFullscreen().catch((e: Error) => report && setFsMsg(`Chrome blocked full screen: ${e.message || e.name}`));
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (report) setFsMsg("This browser doesn't support full screen.");
+    } catch (e) { if (report) setFsMsg(`Chrome blocked full screen: ${(e as Error).message}`); }
   };
   useEffect(() => {
     keepAwake();
@@ -92,7 +100,7 @@ export default function Board() {
     : <div key={i} className="slot open"><span className="rk">{i + 1}</span><span className="nm">Open spot</span><span /></div>;
 
   return (
-    <section className="b-shell kiosk" onPointerDown={touch} onClick={goFull}>
+    <section className="b-shell kiosk" onPointerDown={touch} onClick={() => goFull()}>
       <div className="stage" id="stage">
         <div className="field-bg"><Deco /><Flourish /></div>
         <div className="b-grid">
@@ -116,6 +124,7 @@ export default function Board() {
               {q && <div className="b-results" role="listbox">{matches.length ? matches.map((m) => <button key={m.id} type="button" onClick={() => { setOpenId(m.id); setFind(""); }}><b>{m.name}</b><span>{m.group}</span></button>)
                 : <p>No one by that name yet. Only people who chose to show on the board appear here.</p>}</div>}
             </div>
+            {!isFull && <button type="button" className="b-fs" onClick={(e) => { e.stopPropagation(); goFull(true); }}>⤢ Full screen</button>}
             <img className="glogo" src="/logo-cream.png" alt="groove" />
           </div>
         </div>
@@ -128,6 +137,7 @@ export default function Board() {
           <div className="pt">{open.tests.map((x) => <div key={x.t} className="prow"><span className="pn">{x.name}</span><span className="pv num">{x.d}<small>{x.u}</small></span><span className={`ptier ${x.tier}`}>{x.tierLabel}</span></div>)}</div>
           {open.combine == null && <p className="pnote">Finish all five tests to get a Combine Score and a spot on the Combine board.</p>}
         </>}</aside>
+        {fsMsg && <div className="b-fsmsg" onClick={() => setFsMsg("")}>{fsMsg}</div>}
         <div className="b-prog" aria-hidden="true"><i style={{ width: `${prog * 100}%` }} /></div>
       </div>
     </section>
