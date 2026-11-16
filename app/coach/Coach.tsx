@@ -126,7 +126,7 @@ export default function Coach() {
             const v2 = pre?.grip != null ? { ...v, scores: { ...v.scores, grip: pre.grip } } : v;
             setCur(v2); if (v2 !== v) queuePatch(v2, { scores: v2.scores }); setPre(null); setMode("scores");
           }} />}
-          {mode === "scores" && cur && <ScoresStep v={cur} onSign={() => setWv(true)} onScores={updateScores} onClose={() => { show("Saved. Search their name to pick up where you left off."); close(); }} onNext={() => setMode("results")} />}
+          {mode === "scores" && cur && <ScoresStep v={cur} onRename={(name) => { const v = { ...cur, name }; setCur(v); setList((l) => l.map((x) => (x.id === v.id ? v : x))); queuePatch(v, { name }); show("Name saved."); }} onSign={() => setWv(true)} onScores={updateScores} onClose={() => { show("Saved. Search their name to pick up where you left off."); close(); }} onNext={() => setMode("results")} />}
           {mode === "results" && cur && <ResultsStep v={cur} onEdit={() => setMode("scores")} onClose={close} onEmail={(email, quiet) => { const v = { ...cur, email }; setCur(v); queuePatch(v, { email }); if (!quiet) show(`Saved. ${cur.name.split(" ")[0]}'s results are on their way to ${email}.`); }}
             onOptIn={(o) => { const v = { ...cur, ...o, email: o.email || cur.email }; setCur(v); queuePatch(v, o); show("Saved."); }} />}
           {wv && cur && <WaiverModal forName={cur.name} visitorId={cur.id} onClose={() => setWv(false)} show={show} onSigned={(w) => {
@@ -249,7 +249,15 @@ function Echo({ t, v }: { t: TestId; v: Visitor }) {
   return <>{t === "squat" ? `${fmt(t, val)}${val >= CLUB_SEC ? " · 1:00 Club" : ""}` : null}<span className={`pill ${tr}`}>{TIER[tr]}</span></>;
 }
 
-function ScoresStep({ v, onSign, onScores, onClose, onNext }: { v: Visitor; onSign: () => void; onScores: (s: Scores, f?: Floor | null) => void; onClose: () => void; onNext: () => void }) {
+function NameEdit({ name, onSave }: { name: string; onSave: (n: string) => void }) {
+  const [ed, setEd] = useState(false), [val, setVal] = useState(name);
+  const save = () => { const n = val.trim().replace(/\s+/g, " ").slice(0, 60); if (n && n !== name) onSave(n); else setVal(name); setEd(false); };
+  return ed
+    ? <form className="name-ed" onSubmit={(e) => { e.preventDefault(); save(); }}><input className="input" id="s-title" autoFocus value={val} onChange={(e) => setVal(e.target.value)} autoComplete="off" autoCapitalize="words" aria-label="Name" /><button type="submit" className="btn-sm">Save</button><button type="button" className="textlink" onClick={() => { setVal(name); setEd(false); }}>Cancel</button></form>
+    : <h2 className="s-title" id="s-title">{name} <button type="button" className="textlink name-btn" onClick={() => { setVal(name); setEd(true); }}>Edit name</button></h2>;
+}
+
+function ScoresStep({ v, onRename, onSign, onScores, onClose, onNext }: { v: Visitor; onRename: (name: string) => void; onSign: () => void; onScores: (s: Scores, f?: Floor | null) => void; onClose: () => void; onNext: () => void }) {
   const [raw, setRaw] = useState<Record<string, string>>(() => Object.fromEntries(ORDER.map((t) => [t, v.scores[t] != null ? String(v.scores[t]) : ""])));
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const fl: Floor = v.floor_detail || { dn: 0, dw: 0, un: 0, uw: 0 };
@@ -274,7 +282,7 @@ function ScoresStep({ v, onSign, onScores, onClose, onNext }: { v: Visitor; onSi
   return (
     <div className="sheet-in"><Steps at={1} onClose={onClose} />
       <div className="s-body">
-        <div><h2 className="s-title" id="s-title">{v.name}</h2><p className="muted">{v.sex === "F" ? "Female" : "Male"}, {v.age}. Leave a test blank if they skip it.</p></div>
+        <div><NameEdit name={v.name} onSave={onRename} /><p className="muted">{v.sex === "F" ? "Female" : "Male"}, {v.age}. Leave a test blank if they skip it.</p></div>
         {locked && <button type="button" className="wv-cta" onClick={onSign}><span><b>Grip is open. The other four need a waiver.</b><span>Hand them the iPad to read and sign.</span></span><span className="go">Sign waiver ›</span></button>}
         <div className="entries">
           {nums.map((t, i) => (

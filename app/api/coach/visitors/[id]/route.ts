@@ -17,6 +17,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const lb = b.scores.grip_lb; if (typeof lb === "number" && isFinite(lb) && lb > 0) s.grip_lb = Math.min(250, Math.round(lb * 2) / 2);
     patch.scores = s;
   }
+  if (typeof b.name === "string") { const n = b.name.trim().replace(/\s+/g, " ").slice(0, 60); if (!n) return NextResponse.json({ error: "Name can't be empty." }, { status: 400 }); patch.name = n; }
   if ("floor_detail" in b) patch.floor_detail = b.floor_detail ?? null;
   if (typeof b.opt_in === "boolean") patch.opt_in = b.opt_in;
   if (typeof b.giveaway === "boolean") patch.giveaway = b.giveaway;

@@ -779,3 +779,6 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 @media (max-width: 520px) { .retest { gap: 14px; padding: 16px; } .retest .cal { width: 58px; } .retest .cal .dd { font-size: 26px; } }
 .path .copy2 { background: transparent; color: var(--ink); border: 2px solid rgba(178, 235, 240, 0.45); min-height: 48px; font-size: 16px; padding: 0 20px; }
 .lb-show { margin-top: 14px; }
+.name-btn { font-size: 15px; font-weight: 700; margin-left: 10px; vertical-align: middle; letter-spacing: 0; }
+.name-ed { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.name-ed .input { font-size: 24px; font-weight: 700; max-width: 360px; flex: 1 1 220px; }
