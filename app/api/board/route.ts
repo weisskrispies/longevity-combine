@@ -4,7 +4,7 @@ import { SHOW_DAYS, defaultDay, ptDay } from "@/lib/days";
 import { CLUB_SEC, balanceLabel, BRACKETS, ORDER, TIER, TESTS, displayName, tierFor, bracketOf, combine, hasAny, isFull, testsDone, percentile, fmt, unitOf, type Sex, type TestId } from "@/lib/norms";
 
 export const dynamic = "force-dynamic";
-type Entry = { id: string; name: string; d: string; u: string };
+type Entry = { id: string; name: string; d: string; u: string; g?: string };
 
 /** Public leaderboard: names (opted in only) and display values. No ages or emails leave the server. */
 export async function GET(req: Request) {
@@ -32,6 +32,10 @@ export async function GET(req: Request) {
       return { label, F: pick("F"), M: pick("M") };
     });
   }
+  // Combine Score: one list for everyone, ranked by points. Age group and sex shown as a label on each row.
+  const top = pub.map((v) => ({ v, p: { age: v.age, sex: v.sex as Sex, scores: v.scores } })).filter((r) => hasAny(r.p))
+    .map((r) => ({ k: combine(r.p) + testsDone(r.p) / 10, e: { id: r.v.id, name: displayName(r.v.name), d: String(combine(r.p)), u: isFull(r.p) ? "" : `${testsDone(r.p)} of 5`, g: `${r.v.sex === "F" ? "Women" : "Men"}, ${BRACKETS.find((b) => b[0] === bracketOf(r.v.age))![1]}` } }))
+    .sort((a, b) => b.k - a.k).slice(0, 10).map((x) => x.e);
   const club = pub.filter((v) => (v.scores.squat ?? 0) >= CLUB_SEC).map((v) => displayName(v.name));
   // Searchable profiles across every day: opted-in only, age group instead of exact age, no contact details.
   // Each person's standing is within the day they tested, matching their report.
@@ -50,5 +54,5 @@ export async function GET(req: Request) {
       combine: hasAny(p) ? combine(p) : null, done: testsDone(p), standing: groupRank.get(v.id) ?? null, day: v.day, club: (v.scores.squat ?? 0) >= CLUB_SEC,
     };
   });
-  return NextResponse.json({ day, today: ptDay(), days: SHOW_DAYS, count: all.length, views, club, people }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ day, today: ptDay(), days: SHOW_DAYS, count: all.length, views, top, club, people }, { headers: { "cache-control": "no-store" } });
 }

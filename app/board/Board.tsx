@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { dayChip, dayLong } from "@/lib/days";
 
-type Entry = { id: string; name: string; d: string; u: string };
+type Entry = { id: string; name: string; d: string; u: string; g?: string };
 type Profile = { id: string; name: string; group: string; tests: { t: string; name: string; d: string; u: string; tier: string; tierLabel: string; pts: number | null; }[]; combine: number | null; standing: { rank: number; total: number } | null; club: boolean; day: string };
 const TALLY_MIN = 10; // hide the "Tested today" badge until the day has this many
-type Data = { day: string; today: string; days: string[]; count: number; views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]>; club: string[]; people: Profile[] };
+type Data = { day: string; today: string; days: string[]; count: number; views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]>; top?: Entry[]; club: string[]; people: Profile[] };
 const VIEWS: [string, string][] = [["overall", "Combine Score"], ["grip", "Grip"], ["balance", "Balance"], ["squat", "Squat hold"], ["pushups", "Push-ups"], ["floor", "Floor rise"], ["club", "1:00 Club"]];
 const EXPLAIN: Record<string, string> = {
   overall: "Each test you do adds up to 100 points against people your age and sex. Max 500.",
@@ -100,6 +100,10 @@ export default function Board() {
     ? <button type="button" key={i} onClick={() => setOpenId(e.id)} className={`slot ${i === 0 ? "first" : ""} ${q && e.name.toLowerCase().startsWith(q) ? "me" : ""}`}><span className="rk">{i + 1}</span><span className="nm">{e.name}</span><span className="vl num">{e.d}<small>{e.u}</small></span></button>
     : <div key={i} className="slot open"><span className="rk">{i + 1}</span><span className="nm">{i === 0 ? "Claim the top spot" : "Your name here"}</span><span /></div>;
 
+  const row = (e: Entry | undefined, i: number) => e
+    ? <button type="button" key={i} onClick={() => setOpenId(e.id)} className={`lrow ${i < 3 ? "podium" : ""} ${i === 0 ? "first" : ""} ${q && e.name.toLowerCase().startsWith(q) ? "me" : ""}`}><span className="rk">{i + 1}</span><span className="who"><span className="nm">{e.name}</span><span className="grp">{e.g}</span></span><span className="vl num">{e.d}{e.u && <small>{e.u}</small>}</span></button>
+    : <div key={i} className="lrow open"><span className="rk">{i + 1}</span><span className="who"><span className="nm">{i === 0 ? "Claim the top spot" : "Your name here"}</span></span><span /></div>;
+
   return (
     <section className="b-shell kiosk" onPointerDown={touch} onClick={() => goFull()}>
       <div className="stage" id="stage">
@@ -116,6 +120,7 @@ export default function Board() {
           {view === "club"
             ? <div className="club"><div className="club-badge"><span className="t">1:00</span><span className="s">Club</span></div>
                 <div className="club-names">{data?.club.length ? data.club.map((n, i) => <span key={i}>{n}</span>) : <span className="em">No members yet. One minute. You in?</span>}</div></div>
+            : view === "overall" ? <div className="b-list">{Array.from({ length: 10 }, (_, i) => row(data?.top?.[i], i))}</div>
             : <div className="b-cols">{(data?.views[view] ?? []).map((c) => (
                 <div className="b-col" key={c.label}><h3>{c.label}</h3><span className="sx">Women</span>{[0, 1].map((i) => slot(c.F[i], i))}<span className="sx">Men</span>{[0, 1].map((i) => slot(c.M[i], i))}</div>))}</div>}
           <div className="b-foot">
