@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, emailOk, isCoach } from "@/lib/server";
 import { sendReportEmail } from "@/lib/email";
 import { dayLong, ptDay } from "@/lib/days";
-import { BRACKETS, bracketOf, combine, displayName, isFull, type Sex } from "@/lib/norms";
+import { BRACKETS, bracketOf, combine, displayName, hasAny, type Sex } from "@/lib/norms";
 
 export const dynamic = "force-dynamic";
 const COLS = "id, code, name, age, sex, aspire, aspire_text, role, company, scores, email, emailed_at, interest, created_at";
@@ -25,12 +25,12 @@ const shape = (v: Row, coach = false) => ({
 /** Their spot on the board: top 2 in their age group and sex, plus their own rank. Full-five finishers only. */
 async function standing(v: Row, coach = false) {
   const me = { age: v.age, sex: v.sex as Sex, scores: v.scores || {} };
-  if ((!v.email && !coach) || !isFull(me)) return null;
+  if ((!v.email && !coach) || !hasAny(me)) return null;
   const b = bracketOf(v.age), br = BRACKETS.find((x) => x[0] === b)!;
   // Ranked against people tested the same day (Vegas time) as this visitor.
   const myDay = ptDay(v.created_at);
   const { data } = await db().from("visitors").select("id, name, age, sex, opt_in, scores, created_at").eq("sex", v.sex).gte("age", br[2]).lte("age", br[3]);
-  const field = (data ?? []).filter((x) => ptDay(x.created_at) === myDay).map((x) => ({ ...x, s: combine({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }), full: isFull({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }) }))
+  const field = (data ?? []).filter((x) => ptDay(x.created_at) === myDay).map((x) => ({ ...x, s: combine({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }), full: hasAny({ age: x.age, sex: x.sex as Sex, scores: x.scores || {} }) }))
     .filter((x) => x.full).sort((a, c) => c.s - a.s);
   const rank = field.findIndex((x) => x.id === v.id) + 1;
   return {

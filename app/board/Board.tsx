@@ -8,7 +8,7 @@ const TALLY_MIN = 10; // hide the "Tested today" badge until the day has this ma
 type Data = { day: string; today: string; days: string[]; count: number; views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]>; club: string[]; people: Profile[] };
 const VIEWS: [string, string][] = [["overall", "Combine Score"], ["grip", "Grip"], ["balance", "Balance"], ["squat", "Squat hold"], ["pushups", "Push-ups"], ["floor", "Floor rise"], ["club", "1:00 Club"]];
 const EXPLAIN: Record<string, string> = {
-  overall: "All five tests. Each scores up to 100 against people your age and sex. Max 500.",
+  overall: "Each test you do adds up to 100 points against people your age and sex. Max 500.",
   grip: "Percentile for your age and sex, from the Able Assess dynamometer.", balance: "One leg, ranked against your age (eyes open or closed).",
   squat: "Ranked against your age. Hold a full minute to join the 1:00 Club.", pushups: "As many as you can. Men full, women from the knees.",
   floor: "Down to the floor and back up. Scored out of 10.", club: "Held the squat for the full minute.",
@@ -136,7 +136,7 @@ export default function Board() {
           {open.combine != null && <div className="pc"><span className="v num">{open.combine}</span><span>Combine Score{open.standing ? <><br /><b>#{open.standing.rank}</b> of {open.standing.total} in {open.group.toLowerCase()} on {dayLong(open.day).split(",")[0]}</> : null}</span></div>}
           {open.club && <span className="pclub">1:00 Club</span>}
           <div className="pt">{open.tests.map((x) => <div key={x.t} className="prow"><span className="pn">{x.name}</span><span className="pv num">{x.d}<small>{x.u}</small></span><span className="ppts num">{x.pts ?? "–"}<small>pts</small></span><span className={`ptier ${x.tier}`}>{x.tierLabel}</span></div>)}{open.combine != null && <div className="prow ptotal"><span className="pn">Combine Score <small>(points added up)</small></span><span /><span className="ppts num">{open.combine}</span><span /></div>}</div>
-          {open.combine == null && <p className="pnote">Finish all five tests to get a Combine Score and a spot on the Combine board.</p>}
+          {open.combine != null && open.tests.length < 5 && <p className="pnote">{5 - open.tests.length} more {open.tests.length === 4 ? "test" : "tests"} to go. Each one adds up to 100 points.</p>}
         </>}</aside>
         {fsMsg && <div className="b-fsmsg" onClick={() => setFsMsg("")}>{fsMsg}</div>}
         <div className="b-prog" aria-hidden="true"><i style={{ width: `${prog * 100}%` }} /></div>

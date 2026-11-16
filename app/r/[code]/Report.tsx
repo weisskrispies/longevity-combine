@@ -192,7 +192,7 @@ function Standing({ st }: { st: NonNullable<Data["standing"]> }) {
   const inTop = st.rank <= 2, when = st.isToday ? "today" : `on ${st.day.split(",")[0]}`;
   return (
     <section className="sec"><div className="sec-head"><span className="ov">The leaderboard</span><h2>{inTop ? `You're #${st.rank} on the board ${when}.` : `You're #${st.rank} of ${st.total} ${when}.`}</h2>
-        <p>You finished all five, so you&rsquo;re ranked against {st.group.toLowerCase()} tested on {st.day} by Combine Score: each test scores up to 100 against people your age and sex.{st.isToday ? " This updates live until the end of the day." : " That day is final."}</p></div>
+        <p>You&rsquo;re ranked against {st.group.toLowerCase()} tested on {st.day} by Combine Score. Each test adds up to 100 points against people your age and sex, so every test you finish moves you up.{st.isToday ? " This updates live until the end of the day." : " That day is final."}</p></div>
       <div className="board-mini" aria-live="polite"><div className="bm-head"><span>{st.group}</span><span className="small">{st.isToday ? "Today" : st.day.split(",")[0]} · {st.total} {st.total === 1 ? "finisher" : "finishers"}</span></div>
         {st.top.map((r) => <div key={r.rank} className={`bm-row ${r.rank === 1 ? "first" : ""} ${r.me ? "me" : ""}`}><span className="rk">{r.rank}</span><span className="nm">{r.me ? "You" : r.name}</span><span className="sc num">{r.score}</span></div>)}
         {!inTop && <><div className="bm-gap" aria-hidden="true">···</div><div className="bm-row me"><span className="rk">{st.rank}</span><span className="nm">You</span><span className="sc num">{st.score}</span></div></>}

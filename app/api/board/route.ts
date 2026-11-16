@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/server";
 import { SHOW_DAYS, defaultDay, ptDay } from "@/lib/days";
-import { CLUB_SEC, balanceLabel, BRACKETS, ORDER, TIER, TESTS, displayName, tierFor, bracketOf, combine, isFull, percentile, fmt, unitOf, type Sex, type TestId } from "@/lib/norms";
+import { CLUB_SEC, balanceLabel, BRACKETS, ORDER, TIER, TESTS, displayName, tierFor, bracketOf, combine, hasAny, isFull, testsDone, percentile, fmt, unitOf, type Sex, type TestId } from "@/lib/norms";
 
 export const dynamic = "force-dynamic";
 type Entry = { id: string; name: string; d: string; u: string };
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
       const pick = (sex: Sex) => {
         let rows = pub.filter((v) => bracketOf(v.age) === id && v.sex === sex).map((v) => ({ v, p: { age: v.age, sex: v.sex as Sex, scores: v.scores } }));
         let ranked: { k: number; e: Entry }[];
-        if (view === "overall") ranked = rows.filter((r) => isFull(r.p)).map((r) => ({ k: combine(r.p), e: { id: r.v.id, name: displayName(r.v.name), d: String(combine(r.p)), u: "" } }));
+        if (view === "overall") ranked = rows.filter((r) => hasAny(r.p)).map((r) => ({ k: combine(r.p) + testsDone(r.p) / 10, e: { id: r.v.id, name: displayName(r.v.name), d: String(combine(r.p)), u: isFull(r.p) ? "" : `${testsDone(r.p)} of 5` } }));
         else {
           const t = view as TestId;
           ranked = rows.filter((r) => r.p.scores[t] != null).map((r) => ({ k: percentile(t, r.p.age, r.p.sex, r.p.scores[t], !!r.p.scores.balance_eo)! + r.p.scores[t] / 1000, e: { id: r.v.id, name: displayName(r.v.name), d: fmt(t, r.p.scores[t]), u: unitOf(t) } }));
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
   const pubAll = everyone.filter((v) => v.opt_in);
   const groupRank = new Map<string, { rank: number; total: number }>();
   for (const d of [...new Set(pubAll.map((v) => v.day))]) for (const sex of ["F", "M"] as Sex[]) for (const [bid] of BRACKETS) {
-    const field = pubAll.filter((v) => v.day === d && v.sex === sex && bracketOf(v.age) === bid && isFull({ age: v.age, sex, scores: v.scores }))
+    const field = pubAll.filter((v) => v.day === d && v.sex === sex && bracketOf(v.age) === bid && hasAny({ age: v.age, sex, scores: v.scores }))
       .map((v) => ({ id: v.id, s: combine({ age: v.age, sex, scores: v.scores }) })).sort((a, b) => b.s - a.s);
     field.forEach((f, i) => groupRank.set(f.id, { rank: i + 1, total: field.length }));
   }
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
     return {
       id: v.id, name: displayName(v.name), group: `${v.sex === "F" ? "Women" : "Men"}, ${br[1]}`,
       tests: ORDER.filter((t) => v.scores[t] != null).map((t) => { const tr = tierFor(t, p)!; return { t, name: t === "balance" ? `Balance, ${balanceLabel(v.scores)}` : TESTS[t].name, d: fmt(t, v.scores[t]), u: t === "grip" && v.scores.grip_lb ? `pct · ${v.scores.grip_lb} lb` : unitOf(t), tier: tr, tierLabel: TIER[tr], pts: percentile(t, v.age, v.sex as Sex, v.scores[t], !!v.scores.balance_eo) }; }),
-      combine: isFull(p) ? combine(p) : null, standing: groupRank.get(v.id) ?? null, day: v.day, club: (v.scores.squat ?? 0) >= CLUB_SEC,
+      combine: hasAny(p) ? combine(p) : null, done: testsDone(p), standing: groupRank.get(v.id) ?? null, day: v.day, club: (v.scores.squat ?? 0) >= CLUB_SEC,
     };
   });
   return NextResponse.json({ day, today: ptDay(), days: SHOW_DAYS, count: all.length, views, club, people }, { headers: { "cache-control": "no-store" } });

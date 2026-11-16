@@ -150,6 +150,8 @@ export function pointsOf(p: Person): Partial<Record<TestId, number>> {
   return o;
 }
 export const combine = (p: Person) => Object.values(pointsOf(p)).reduce((a, b) => a + (b ?? 0), 0);
+export const testsDone = (p: Person) => ORDER.filter((t) => p.scores[t] != null).length;
+export const hasAny = (p: Person) => testsDone(p) > 0;
 export const isFull = (p: Person) => ORDER.every((t) => p.scores[t] != null);
 const ord = (n: number) => { const r = Math.round(n), k = r % 100; return `${r}${k >= 11 && k <= 13 ? "th" : ["th", "st", "nd", "rd"][r % 10] ?? "th"}`; };
 export const fmt = (t: TestId, v: number | null | undefined) =>

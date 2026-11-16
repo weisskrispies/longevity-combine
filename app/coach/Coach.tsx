@@ -327,7 +327,7 @@ function ResultsStep({ v, onEdit, onClose, onEmail, onOptIn }: { v: Visitor; onE
         <div className="cols">
           <div className="panel"><div className="rlist">{ORDER.map((t) => { const val = v.scores[t]; if (val == null) return <div key={t} className="rline skip"><span className="t">{TESTS[t].short}</span><span className="v">Skipped</span><span /></div>;
             const tr = tierFor(t, v)!; return <div key={t} className="rline"><span className="t">{TESTS[t].short}</span><span className="v num">{fmt(t, val)}<small>{unitOf(t)}</small></span><span className={`pill ${tr}`}>{TIER[tr]}</span></div>; })}</div>
-            {isFull(p) ? <div className="cstrip"><span><b>All five done.</b><br /><span className="small">Combine Score, out of 500</span></span><span className="v num">{combine(p)}</span></div> : <p className="small muted">Do all five to get a Combine Score and a spot on the Combine board.</p>}</div>
+            {isFull(p) ? <div className="cstrip"><span><b>All five done.</b><br /><span className="small">Combine Score, out of 500</span></span><span className="v num">{combine(p)}</span></div> : <div className="cstrip"><span><b>On the board.</b><br /><span className="small">{ORDER.filter((t) => v.scores[t] != null).length} of 5 done. Each test adds up to 100.</span></span><span className="v num">{combine(p)}</span></div>}</div>
           <div className="panel">
             <div className="share"><div className="qr">{qr && <img src={qr} alt={`QR code for ${v.name}'s report`} />}</div>
               <div className="txt"><h3>Scan for your full report</h3><p className="small muted">This code is unique to {v.name.split(" ")[0]}. An email entered on their phone links back to this visit.</p>
