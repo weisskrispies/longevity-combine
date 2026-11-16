@@ -54,5 +54,5 @@ export async function GET(req: Request) {
       combine: hasAny(p) ? combine(p) : null, done: testsDone(p), standing: groupRank.get(v.id) ?? null, day: v.day, club: (v.scores.squat ?? 0) >= CLUB_SEC,
     };
   });
-  return NextResponse.json({ day, today: ptDay(), days: SHOW_DAYS, count: all.length, views, top, club, people }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ day, today: ptDay(), days: SHOW_DAYS, count: all.length, views, top, club, people, build: process.env.VERCEL_GIT_COMMIT_SHA ?? "dev" }, { headers: { "cache-control": "no-store" } });
 }

@@ -13,6 +13,7 @@ const EXPLAIN: Record<string, string> = {
   squat: "Ranked against your age. Hold a full minute to join the 1:00 Club.", pushups: "As many as you can. Men full, women from the knees.",
   floor: "Down to the floor and back up. Scored out of 10.", club: "Held the squat for the full minute.",
 };
+const BUILD: { v?: string } = {}; // reload the board by itself when a new version is deployed
 const ROTATE_MS = 10000, IDLE_MS = 30000, POLL_MS = 5000;
 
 const Deco = () => (
@@ -61,7 +62,7 @@ export default function Board() {
   const [day, setDay] = useState<string | null>(null); // null = today (the server picks it)
   const idleAt = useRef(0), t0 = useRef(0);
 
-  const load = useCallback(() => fetch(`/api/board${day ? `?day=${day}` : ""}`, { cache: "no-store" }).then((r) => r.ok && r.json()).then((j) => j && setData(j)).catch(() => {}), [day]);
+  const load = useCallback(() => fetch(`/api/board${day ? `?day=${day}` : ""}`, { cache: "no-store" }).then((r) => r.ok && r.json()).then((j) => { if (!j) return; if (j.build && BUILD.v && j.build !== BUILD.v) { location.reload(); return; } BUILD.v ||= j.build; setData(j); }).catch(() => {}), [day]);
   useEffect(() => { load(); const h = setInterval(load, POLL_MS); return () => clearInterval(h); }, [load]);
   useEffect(() => {
     t0.current = performance.now();
