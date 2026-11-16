@@ -4,6 +4,7 @@ import { dayChip, dayLong } from "@/lib/days";
 
 type Entry = { id: string; name: string; d: string; u: string };
 type Profile = { id: string; name: string; group: string; tests: { t: string; name: string; d: string; u: string; tier: string; tierLabel: string }[]; combine: number | null; standing: { rank: number; total: number } | null; club: boolean; day: string };
+const TALLY_MIN = 10; // hide the "Tested today" badge until the day has this many
 type Data = { day: string; today: string; days: string[]; count: number; views: Record<string, { label: string; F: Entry[]; M: Entry[] }[]>; club: string[]; people: Profile[] };
 const VIEWS: [string, string][] = [["overall", "Combine Score"], ["grip", "Grip"], ["balance", "Balance"], ["squat", "Squat hold"], ["pushups", "Push-ups"], ["floor", "Floor rise"], ["club", "1:00 Club"]];
 const EXPLAIN: Record<string, string> = {
@@ -97,7 +98,7 @@ export default function Board() {
   const open = openId ? data?.people.find((m) => m.id === openId) : null;
   const slot = (e: Entry | undefined, i: number) => e
     ? <button type="button" key={i} onClick={() => setOpenId(e.id)} className={`slot ${i === 0 ? "first" : ""} ${q && e.name.toLowerCase().startsWith(q) ? "me" : ""}`}><span className="rk">{i + 1}</span><span className="nm">{e.name}</span><span className="vl num">{e.d}<small>{e.u}</small></span></button>
-    : <div key={i} className="slot open"><span className="rk">{i + 1}</span><span className="nm">Open spot</span><span /></div>;
+    : <div key={i} className="slot open"><span className="rk">{i + 1}</span><span className="nm">{i === 0 ? "Claim the top spot" : "Your name here"}</span><span /></div>;
 
   return (
     <section className="b-shell kiosk" onPointerDown={touch} onClick={() => goFull()}>
@@ -108,7 +109,7 @@ export default function Board() {
             <div className="lockup"><span className="l1">Longevity</span><span className="l2"><svg className="sw" viewBox="0 0 60 16" aria-hidden="true"><path d="M4 5 H58 M14 11 H58" /></svg><span>Combine</span><svg className="sw flip" viewBox="0 0 60 16" aria-hidden="true"><path d="M4 5 H58 M14 11 H58" /></svg></span><svg className="spark s1" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg><svg className="spark s2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6-2.6 7.9-2.6-7.9-7.9-2.6 7.9-2.6z" /></svg></div>
             <div className="v-title"><span className="rib">{VIEWS.find((v) => v[0] === view)![1]}</span><span className="exp">{EXPLAIN[view]}</span></div>
             <div className="b-right">
-              <div className="tally"><span className="n num">{data?.count ?? "–"}</span><span className="l">{!data || data.day === data.today ? "Tested today" : data.day === "all" ? "Tested so far" : `Tested ${dayChip(data.day).split(" ")[0]}`}</span></div>
+              {(data?.count ?? 0) >= TALLY_MIN && <div className="tally"><span className="n num">{data?.count ?? "–"}</span><span className="l">{!data || data.day === data.today ? "Tested today" : data.day === "all" ? "Tested so far" : `Tested ${dayChip(data.day).split(" ")[0]}`}</span></div>}
               <nav className="b-days" aria-label="Day">{[...(data?.days ?? []), "all"].map((d) => <button key={d} type="button" aria-pressed={(data?.day ?? "") === d} onClick={() => setDay(d === data?.today ? null : d)}>{d === "all" ? "All days" : d === data?.today ? "Today" : dayChip(d)}</button>)}</nav>
             </div>
           </div>
