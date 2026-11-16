@@ -766,3 +766,15 @@ button.slot { background: transparent; border: 0; color: inherit; text-align: le
 .ptotal { border-top: 0.3cqh solid #0F4258; }
 .ptotal .pn { font-weight: 900; } .ptotal .pn small { font-weight: 600; color: #4C6874; font-size: 1.4cqh; }
 .ptotal .ppts { font-size: 3.4cqh; }
+/* report v8: secondary email button, re-test card */
+.btn-out { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 2px solid rgba(178, 235, 240, 0.45); background: transparent; color: var(--ink); font-weight: 700; font-size: 16px; padding: 0 20px; min-height: 48px; text-decoration: none; }
+.btn-out:hover { border-color: #B2EBF0; }
+.retest { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; background: rgba(178, 235, 240, 0.06); }
+.retest .cal { display: grid; width: 68px; border-radius: 14px; overflow: hidden; background: #F4F2EC; text-align: center; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2); }
+.retest .cal .m { background: #FFCA42; color: #0F4258; font-size: 13px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 0; }
+.retest .cal .dd { color: #0F4258; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; padding: 4px 0 6px; line-height: 1.1; }
+.retest .rt-txt { display: grid; gap: 4px; }
+.retest .rt-txt .ov { font-size: 12px; }
+.retest .rt-txt b { display: block; font-size: 18px; line-height: 1.3; }
+@media (max-width: 520px) { .retest { gap: 14px; padding: 16px; } .retest .cal { width: 58px; } .retest .cal .dd { font-size: 26px; } }
+.path .copy2 { background: transparent; color: var(--ink); border: 2px solid rgba(178, 235, 240, 0.45); min-height: 48px; font-size: 16px; padding: 0 20px; }

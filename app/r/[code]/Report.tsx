@@ -92,7 +92,7 @@ export default function Report({ code }: { code: string }) {
   const gTests = proj(fromGoals).length ? proj(fromGoals) : proj(sorted.slice().reverse()).slice(0, 2);
   const prio = [...new Set([low, ...gTests, ...sorted.slice().reverse()])].filter((t) => tierFor(t, p) !== "elite").slice(0, 3);
   const habits = prio.length ? prio : [low];
-  const retest = new Date(Date.now() + 28 * 864e5).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const rt = new Date(Date.now() + 28 * 864e5), rtMon = rt.toLocaleDateString("en-US", { month: "short" }), rtDay = rt.getDate();
 
   return (
     <article className="rp gutter">{top}
@@ -106,7 +106,7 @@ export default function Report({ code }: { code: string }) {
           <div className="cmp-card" key={t}><div className="cmp-top"><h3>{tName(t)}</h3><span className="res">{fmt(t, d.scores![t])}<small>{unitOf(t)}{t === "grip" && d.scores!.grip_lb ? ` · ${d.scores!.grip_lb} lb` : ""}</small></span></div>
             <div className="ladder" role="img" aria-label={`${TIER[tr]}${t === "floor" ? " risk band" : ` for your age, ${pc}th percentile`}`}>{TIERS.map((x, i) => <span key={x} className={`seg ${i <= ti ? "on" : ""} ${i <= ti && tr === "elite" ? "elite" : ""}`} />)}<span className="mk" style={{ left: `${ladderPos(t, p)}%` }} /></div>
             <div className="ladder-l">{TIERS.map((x) => <span key={x} className={x === tr ? "on" : ""}>{TIER[x]}</span>)}</div>
-            <p className="cmp-say">{t === "floor" ? <>{d.scores![t]! >= 8 ? <>In the <b>lowest-risk band</b> (8 to 10) in the research on this test.</> : <>The research&rsquo;s lowest-risk band starts at <b>8</b>. Each point counts.</>} {pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50))}</b>.</>}</> : pc >= 50 ? <>Ahead of <b>{pc}%</b> of {who} your age.</> : t === "grip" ? <>Below the middle for {who} your age, with room to build.</> : <>Typical for {who} your age is <b>{fmt(t, valueAt(t, d.age, d.sex, 50, eo))}{u(t)}</b>.</>}</p></div>); })}</div>
+            <p className="cmp-say">{t !== "grip" && !(t === "balance" && eo) && d.scores![t]! >= TESTS[t].max ? <b>Maxed out.</b> : t === "grip" && pc < 50 ? <b>Below the middle for your age.</b> : pc >= 50 ? <b>Top {Math.max(1, 100 - pc)}% for {who} your age.</b> : <>Typical for {who} your age: <b>{fmt(t, valueAt(t, d.age, d.sex, 50, t === "balance" ? eo : undefined))}{u(t)}</b>.</>} {WHY(t, d.scores!)}</p></div>); })}</div>
         {notes.length > 0 && <div className="notes">{notes.map((n, i) => <div className="note" key={i}><span style={{ color: "var(--ink)" }}><Idea /></span><p dangerouslySetInnerHTML={{ __html: n }} /></div>)}</div>}
       </section>
       <WaveLine />
@@ -125,7 +125,7 @@ export default function Report({ code }: { code: string }) {
         <div className="habits">{habits.map((t) => { const h = HABITS[t]; return (
           <div className="habit" key={t}><div className="habit-top"><span className="habit-ic" style={{ color: "var(--ink)" }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[t]} /></svg></span><div><span className="for">For your {NOUN[t]}</span><h3>{h.title}</h3></div></div>
             <div className="when">{h.when.map((w) => <span key={w}>{w}</span>)}</div><p className="do">{h.dose[tierFor(t, p) ?? "solid"]}</p><p className="why"><b>Why it works.</b> {h.why}</p></div>); })}</div>
-        <div className="retest"><span className="d">{retest}</span><span><b>Re-test in four weeks.</b><span className="muted small">Repeat your weakest test at home and compare. Most people see a change.</span></span></div>
+        <div className="retest"><span className="cal" aria-hidden="true"><span className="m">{rtMon}</span><span className="dd num">{rtDay}</span></span><span className="rt-txt"><span className="ov">Your re-test</span><b>Try your {NOUN[low]} again on {rtMon}&nbsp;{rtDay}.</b><span className="muted small">Four weeks of the habits above is enough time to see a change.</span></span></div>
         <p className="fine2">General guidance, not a medical prescription. If you have a health condition, check with your clinician first.</p></section>
 
       {d.standing && <Standing st={d.standing} />}
@@ -162,20 +162,30 @@ function Paths({ code, d, onUpdate }: { code: string; d: Data; onUpdate: (d: Dat
     press: { ov: "Press", h: "Talk with the Groove team", p: "Interviews, data from the Combine, and member stories with consent.", btn: "Request an interview", done: "Thanks. Our team will reach out shortly." },
   } as const;
   const main = kind ? CARD[kind] : null, done = !!d.interest;
-  const contact = <div className="act"><a className="addr" href={`mailto:${PARTNER_EMAIL}?subject=${subject}&body=${body}`}>{PARTNER_EMAIL}</a><Copy text={PARTNER_EMAIL} label="Copy email" /></div>;
+  const mail = <a className="btn-out" href={`mailto:${PARTNER_EMAIL}?subject=${subject}&body=${body}`}>Email us</a>;
   const refer = <div className="path"><span className="ov">A parent or patient 65+</span><h3>See if they&rsquo;re eligible</h3><p className="muted small">Groove is covered by Medicare for adults with osteoporosis, osteopenia, sarcopenia or arthritis. A two-minute check at groovehealth.com.</p>
     <div className="act"><a className="btn-sm" href="https://groovehealth.com" target="_blank" rel="noopener">Check eligibility</a><Copy text="https://groovehealth.com" label="Copy link" /></div></div>;
   const partnerSmall = <div className="path"><span className="ov">Work with us</span><h3>Plans, medical groups and health systems</h3><p className="muted small">Talk with our CEO about bringing Groove to your members.</p>
-    {done ? <p className="ok">Thanks. Patrick will email you within a couple of days.</p> : <div className="act"><button className="btn-sm" disabled={busy} onClick={() => ask("partner")}>Have Groove reach out</button></div>}{contact}</div>;
+    {done && <p className="ok">Thanks. Patrick will email you within a couple of days.</p>}<div className="act">{!done && <button className="btn-sm" disabled={busy} onClick={() => ask("partner")}>Have Groove reach out</button>}{mail}</div></div>;
   return (
     <section className="paths">
       {main ? <div className="path main"><span className="ov">{main.ov}</span><h3>{main.h}</h3><p className="muted small">{main.p}</p>
-          {done ? <p className="ok">{main.done}</p> : <div className="act"><button className="btn-sm" disabled={busy} onClick={() => ask(kind!)}>{busy ? "Sending…" : main.btn}</button></div>}
-          {err && <p className="small" role="alert">{err}</p>}<span className="or-line small muted">Or email us directly</span>{contact}</div>
+          {done && <p className="ok">{main.done}</p>}<div className="act">{!done && <button className="btn-sm" disabled={busy} onClick={() => ask(kind!)}>{busy ? "Sending…" : main.btn}</button>}{mail}</div>
+          {err && <p className="small" role="alert">{err}</p>}</div>
         : partnerSmall}
       {refer}
     </section>
   );
+}
+
+function WHY(t: TestId, s: Scores) {
+  switch (t) {
+    case "grip": return "Grip is a quick read on whole-body strength, and one of the strongest single predictors of healthy aging.";
+    case "balance": return s.balance_eo ? "Steady single-leg balance is what keeps you upright on stairs, curbs and uneven ground." : "With eyes closed, your inner ear and feet do all the work, the same systems that steady you in the dark.";
+    case "pushups": return "Upper-body strength is what lets you lift, push, and catch yourself if you trip.";
+    case "squat": return "This is the leg strength behind stairs, low chairs and long walks. No age norms exist yet, so read it as directional.";
+    case "floor": return (s.floor ?? 0) >= 8 ? "You're in the lowest-risk band (8 to 10) in long-term research on this test." : "Long-term research puts the lowest-risk band at 8 and up, and every point counts.";
+  }
 }
 
 function Standing({ st }: { st: NonNullable<Data["standing"]> }) {
