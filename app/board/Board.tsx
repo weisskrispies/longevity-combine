@@ -61,6 +61,9 @@ export default function Board() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null); // null = today (the server picks it)
   const idleAt = useRef(0), t0 = useRef(0);
+  // The day picked on the display sticks (through idle resets and reloads) until someone picks another.
+  useEffect(() => { try { const d = localStorage.getItem("board-day"); if (d) setDay(d === "today" ? null : d); } catch {} }, []);
+  const pickDay = (d: string | null) => { setDay(d); try { localStorage.setItem("board-day", d ?? "today"); } catch {} };
   const [paused, setPaused] = useState(false); // stays on the current tab until played again; remembered on this display
   useEffect(() => { try { setPaused(localStorage.getItem("board-paused") === "1"); } catch {} }, []);
   const togglePause = () => { const p = !paused; setPaused(p); try { localStorage.setItem("board-paused", p ? "1" : "0"); } catch {} };
@@ -71,7 +74,7 @@ export default function Board() {
     t0.current = performance.now();
     const h = setInterval(() => {
       const now = performance.now();
-      if (!auto) { if (now - idleAt.current > IDLE_MS) { setAuto(true); setFind(""); setOpenId(null); setDay(null); t0.current = now; } setProg(0); return; }
+      if (!auto) { if (now - idleAt.current > IDLE_MS) { setAuto(true); setFind(""); setOpenId(null); t0.current = now; } setProg(0); return; }
       if (paused) { setProg(0); t0.current = now; return; }
       const f = (now - t0.current) / ROTATE_MS; setProg(Math.min(1, f));
       if (f >= 1) { t0.current = now; setView((v) => VIEWS[(VIEWS.findIndex((x) => x[0] === v) + 1) % VIEWS.length][0]); }
@@ -119,7 +122,7 @@ export default function Board() {
             <div className="v-title"><span className="rib">{VIEWS.find((v) => v[0] === view)![1]}</span><span className="exp">{EXPLAIN[view]}</span></div>
             <div className="b-right">
               {(data?.count ?? 0) >= TALLY_MIN && <div className="tally"><span className="n num">{data?.count ?? "–"}</span><span className="l">{!data || data.day === data.today ? "Tested today" : data.day === "all" ? "Tested so far" : `Tested ${dayChip(data.day).split(" ")[0]}`}</span></div>}
-              <nav className="b-days" aria-label="Day">{[...(data?.days ?? []), "all"].map((d) => <button key={d} type="button" aria-pressed={(data?.day ?? "") === d} onClick={() => setDay(d === data?.today ? null : d)}>{d === "all" ? "All days" : d === data?.today ? "Today" : dayChip(d)}</button>)}</nav>
+              <nav className="b-days" aria-label="Day">{[...(data?.days ?? []), "all"].map((d) => <button key={d} type="button" aria-pressed={(data?.day ?? "") === d} onClick={() => pickDay(d === data?.today ? null : d)}>{d === "all" ? "All days" : d === data?.today ? "Today" : dayChip(d)}</button>)}</nav>
             </div>
           </div>
           {view === "club"
